@@ -7,14 +7,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 const ImageCachePath = "data/cache/image/"
 
 func init() {
-	plugin_enable := func() bool {
+	pluginEnable := func() bool {
 		return Config.Get("features.image.enable_image").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -26,9 +26,9 @@ func init() {
 			return f
 		}).Bool()
 	}
-	plugin_enable()
+	pluginEnable()
 
-	thumb_size := func() int {
+	thumbSize := func() int {
 		return Config.Get("features.image.thumbnail_size").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -42,9 +42,9 @@ func init() {
 			return f
 		}).Int()
 	}
-	thumb_size()
+	thumbSize()
 
-	thumb_quality := func() int {
+	thumbQuality := func() int {
 		return Config.Get("features.image.thumbnail_quality").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -58,9 +58,9 @@ func init() {
 			return f
 		}).Int()
 	}
-	thumb_quality()
+	thumbQuality()
 
-	thumb_caching := func() int {
+	thumbCaching := func() int {
 		return Config.Get("features.image.thumbnail_caching").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -74,9 +74,9 @@ func init() {
 			return f
 		}).Int()
 	}
-	thumb_caching()
+	thumbCaching()
 
-	image_quality := func() int {
+	imageQuality := func() int {
 		return Config.Get("features.image.image_quality").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -90,9 +90,9 @@ func init() {
 			return f
 		}).Int()
 	}
-	image_quality()
+	imageQuality()
 
-	image_caching := func() int {
+	imageCaching := func() int {
 		return Config.Get("features.image.image_caching").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -106,21 +106,21 @@ func init() {
 			return f
 		}).Int()
 	}
-	image_caching()
+	imageCaching()
 
 	cachePath := filepath.Join(GetCurrentDir(), ImageCachePath)
 	os.RemoveAll(cachePath)
 	os.MkdirAll(cachePath, os.ModePerm)
 
-	Hooks.Register.ProcessFileContentBeforeSend(func (reader io.ReadCloser, ctx *App, res *http.ResponseWriter, req *http.Request) (io.ReadCloser, error){
-		if plugin_enable() == false {
+	Hooks.Register.ProcessFileContentBeforeSend(func(reader io.ReadCloser, ctx *App, res *http.ResponseWriter, req *http.Request) (io.ReadCloser, error) {
+		if !pluginEnable() {
 			return reader, nil
 		}
 
 		query := req.URL.Query()
 		mType := GetMimeType(query.Get("path"))
 
-		if strings.HasPrefix(mType, "image/") == false {
+		if !strings.HasPrefix(mType, "image/") {
 			return reader, nil
 		} else if mType == "image/svg+xml" {
 			return reader, nil
@@ -135,23 +135,23 @@ func init() {
 		/////////////////////////
 		// Specify transformation
 		transform := &Transform{
-			Input: GetAbsolutePath(ImageCachePath + "imagein_" + QuickString(10)),
-			Size:      thumb_size(),
-			Crop:      true,
-			Quality:   thumb_quality(),
-			Exif:      false,
+			Input:   GetAbsolutePath(ImageCachePath + "imagein_" + QuickString(10)),
+			Size:    thumbSize(),
+			Crop:    true,
+			Quality: thumbQuality(),
+			Exif:    false,
 		}
 		if query.Get("thumbnail") == "true" {
-			(*res).Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", thumb_caching()))
+			(*res).Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", thumbCaching()))
 		} else if query.Get("size") != "" {
-			(*res).Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", image_caching()))
+			(*res).Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", imageCaching()))
 			size, err := strconv.ParseInt(query.Get("size"), 10, 64)
 			if err != nil {
 				return reader, nil
 			}
 			transform.Size = int(size)
 			transform.Crop = false
-			transform.Quality = image_quality()
+			transform.Quality = imageQuality()
 			transform.Exif = true
 		}
 
@@ -172,12 +172,12 @@ func init() {
 		/////////////////////////
 		// Transcode RAW image
 		if IsRaw(mType) {
-		 	if ExtractPreview(transform) == nil {
+			if ExtractPreview(transform) == nil {
 				mType = "image/jpeg"
 				(*res).Header().Set("Content-Type", mType)
 			} else {
 				return reader, nil
-		 	}
+			}
 		}
 
 		/////////////////////////
@@ -191,9 +191,9 @@ func init() {
 }
 
 type Transform struct {
-	Input     string
-	Size      int
-	Crop      bool
-	Quality   int
-	Exif      bool
+	Input   string
+	Size    int
+	Crop    bool
+	Quality int
+	Exif    bool
 }

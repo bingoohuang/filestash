@@ -18,7 +18,7 @@ func (a *AppCache) Get(key interface{}) interface{} {
 		return nil
 	}
 	value, found := a.Cache.Get(fmt.Sprintf("%d", hash))
-	if found == false {
+	if !found {
 		return nil
 	}
 	return value
@@ -69,13 +69,9 @@ func NewQuickCache(arg ...time.Duration) AppCache {
 		}
 	}
 	c := AppCache{}
-	c.Cache = cache.New(retention * time.Second, cleanup * time.Second)
+	c.Cache = cache.New(retention*time.Second, cleanup*time.Second)
 	return c
 }
-
-
-// ============================================================================
-
 
 type KeyValueStore struct {
 	cache map[string]interface{}
@@ -83,24 +79,24 @@ type KeyValueStore struct {
 }
 
 func NewKeyValueStore() KeyValueStore {
-	return KeyValueStore{ cache: make(map[string]interface{}) }
+	return KeyValueStore{cache: make(map[string]interface{})}
 }
 
-func (this *KeyValueStore) Get(key string) interface{} {
-	this.RLock()
-	val := this.cache[key]
-	this.RUnlock()
+func (s *KeyValueStore) Get(key string) interface{} {
+	s.RLock()
+	val := s.cache[key]
+	s.RUnlock()
 	return val
 }
 
-func (this *KeyValueStore) Set(key string, value interface{}) {
-	this.Lock()
-	this.cache[key] = value
-	this.Unlock()
+func (s *KeyValueStore) Set(key string, value interface{}) {
+	s.Lock()
+	s.cache[key] = value
+	s.Unlock()
 }
 
-func (this *KeyValueStore) Clear() {
-	this.Lock()
-	this.cache = make(map[string]interface{})
-	this.Unlock()
+func (s *KeyValueStore) Clear() {
+	s.Lock()
+	s.cache = make(map[string]interface{})
+	s.Unlock()
 }

@@ -16,19 +16,19 @@ import (
 )
 
 const (
-	THUMBNAIL_TIMEOUT        = 5 * time.Second
-	THUMBNAIL_MAX_CONCURRENT = 50
+	ThumbnailTimeout       = 5 * time.Second
+	ThumbnailMaxConcurrent = 50
 )
 
-var VIPS_LOCK = semaphore.NewWeighted(THUMBNAIL_MAX_CONCURRENT)
+var VipsLock = semaphore.NewWeighted(ThumbnailMaxConcurrent)
 
 func CreateThumbnail(t *Transform) (io.ReadCloser, error) {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(THUMBNAIL_TIMEOUT))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(ThumbnailTimeout))
 	defer cancel()
-	if err := VIPS_LOCK.Acquire(ctx, 1); err != nil {
+	if err := VipsLock.Acquire(ctx, 1); err != nil {
 		return nil, ErrCongestion
 	}
-	defer VIPS_LOCK.Release(1)
+	defer VipsLock.Release(1)
 
 	imageChannel := make(chan io.ReadCloser, 1)
 	go func() {
@@ -47,18 +47,18 @@ func CreateThumbnail(t *Transform) (io.ReadCloser, error) {
 	}()
 
 	select {
-	case img := <- imageChannel:
+	case img := <-imageChannel:
 		if img == nil {
 			return nil, ErrNotValid
 		}
 		return img, nil
-	case <- ctx.Done():
+	case <-ctx.Done():
 		return nil, ErrTimeout
 	}
 }
 
 func boolToCInt(val bool) C.int {
-	if val == false {
+	if !val {
 		return C.int(0)
 	}
 	return C.int(1)

@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	disable_svg := func() bool {
+	disableSvg := func() bool {
 		return Config.Get("features.protection.disable_svg").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -23,12 +23,12 @@ func init() {
 			return f
 		}).Bool()
 	}
-	disable_svg()
+	disableSvg()
 
-	Hooks.Register.ProcessFileContentBeforeSend(func (reader io.ReadCloser, ctx *App, res *http.ResponseWriter, req *http.Request) (io.ReadCloser, error){
+	Hooks.Register.ProcessFileContentBeforeSend(func(reader io.ReadCloser, ctx *App, res *http.ResponseWriter, req *http.Request) (io.ReadCloser, error) {
 		if GetMimeType(req.URL.Query().Get("path")) != "image/svg+xml" {
 			return reader, nil
-		} else if disable_svg() == true {
+		} else if disableSvg() {
 			return reader, ErrNotAllowed
 		}
 

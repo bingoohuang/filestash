@@ -4,15 +4,15 @@ import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	. "github.com/mickael-kerjean/filestash/server/common"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"time"
 )
 
 var DB *sql.DB
 
 func init() {
-	cachePath := filepath.Join(GetCurrentDir(), DB_PATH)
+	cachePath := filepath.Join(GetCurrentDir(), DbPath)
 	os.MkdirAll(cachePath, os.ModePerm)
 	var err error
 	if DB, err = sql.Open("sqlite3", cachePath+"/share.sql?_fk=true"); err != nil {
@@ -34,7 +34,7 @@ func init() {
 		}
 	}
 
-	go func(){
+	go func() {
 		autovacuum()
 	}()
 }

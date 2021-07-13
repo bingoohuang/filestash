@@ -6,6 +6,7 @@ package plg_handler_console
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/kr/pty"
@@ -15,15 +16,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"encoding/json"
-	"unsafe"
 	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 )
 
-var console_enable = func() bool {
-	return Config.Get("features.server.console_enable").Schema(func(f *FormElement) *FormElement{
+var consoleEnable = func() bool {
+	return Config.Get("features.server.console_enable").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
@@ -37,9 +37,9 @@ var console_enable = func() bool {
 }
 
 func init() {
-	console_enable()
+	consoleEnable()
 	Hooks.Register.HttpEndpoint(func(r *mux.Router, _ *App) error {
-		if console_enable() == false {
+		if !consoleEnable() {
 			return nil
 		}
 		r.PathPrefix("/admin/tty/").Handler(
@@ -65,13 +65,13 @@ func AuthBasic(credentials func() (string, string), fn http.Handler) http.Handle
 		if strings.HasSuffix(Config.Get("general.host").String(), "filestash.app") {
 			http.NotFoundHandler().ServeHTTP(res, req)
 			return
-		} else if console_enable() == false {
+		} else if !consoleEnable() {
 			http.NotFoundHandler().ServeHTTP(res, req)
 			return
 		}
 
 		auth := req.Header.Get("Authorization")
-		if strings.HasPrefix(auth, "Basic ") == false {
+		if !strings.HasPrefix(auth, "Basic ") {
 			notAuthorised(res, req)
 			return
 		}
@@ -108,7 +108,7 @@ func AuthBasic(credentials func() (string, string), fn http.Handler) http.Handle
 }
 
 func TTYHandler(pathPrefix string) http.Handler {
-	if strings.HasSuffix(pathPrefix, "/") == false {
+	if !strings.HasSuffix(pathPrefix, "/") {
 		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusInternalServerError)
 			res.Write([]byte("unsafe path prefix, use a '/'"))
@@ -145,6 +145,7 @@ var resizeMessage = struct {
 	X    uint16
 	Y    uint16
 }{}
+
 func handleSocket(res http.ResponseWriter, req *http.Request) {
 	conn, err := upgrader.Upgrade(res, req, nil)
 	if err != nil {
@@ -176,8 +177,8 @@ EOF
 		cmd = exec.Command("/bin/sh")
 		cmd.Env = []string{
 			"TERM=xterm",
-			"PATH="+os.Getenv("PATH"),
-			"HOME="+os.Getenv("HOME"),
+			"PATH=" + os.Getenv("PATH"),
+			"HOME=" + os.Getenv("HOME"),
 		}
 	} else {
 		res.WriteHeader(http.StatusNotFound)
@@ -252,7 +253,6 @@ EOF
 	}
 }
 
-
 func htmlIndex(pathPrefix string) []byte {
 	return []byte(`<!DOCTYPE html>
 <html lang="en">
@@ -264,14 +264,14 @@ func htmlIndex(pathPrefix string) []byte {
     <meta content="name" name="apple-mobile-web-app-title">
     <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style">
     <title></title>
-    <script>`+VendorScript()+`</script>
-    <style>`+VendorStyle()+`</style>
-    <style>`+AppStyle()+`</style>
+    <script>` + VendorScript() + `</script>
+    <style>` + VendorStyle() + `</style>
+    <style>` + AppStyle() + `</style>
   </head>
   <body>
     <div id="terminal"></div>
     <div id="error-message"></div>
-    <script>`+AppScript(pathPrefix)+`</script>
+    <script>` + AppScript(pathPrefix) + `</script>
   </body>
 </html>`)
 }
@@ -310,7 +310,7 @@ func AppScript(pathPrefix string) string {
         var websocket = new WebSocket(
             (location.protocol === "https:" ? "wss://" : "ws://") +
             location.hostname + ((location.port) ? (":" + location.port) : "") +
-            "`+ pathPrefix +`socket"
+            "` + pathPrefix + `socket"
         );
         websocket.binaryType = "arraybuffer";
 

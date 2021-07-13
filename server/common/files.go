@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-var MOCK_CURRENT_DIR string
+var MockCurrentDir string
 
 func GetCurrentDir() string {
-	if MOCK_CURRENT_DIR != "" {
-		return MOCK_CURRENT_DIR
+	if MockCurrentDir != "" {
+		return MockCurrentDir
 	}
 	ex, _ := os.Executable()
 	return filepath.Dir(ex)
@@ -24,18 +24,16 @@ func IsDirectory(path string) bool {
 	if path == "" {
 		return false
 	}
-	if path[len(path) - 1:] != "/" {
+	if path[len(path)-1:] != "/" {
 		return false
 	}
 	return true
 }
 
-/*
- * Join 2 path together, result has a file
- */
+// JoinPath joins 2 path together, result has a file
 func JoinPath(base, file string) string {
 	filePath := filepath.Join(base, file)
-	if strings.HasPrefix(filePath, base) == false {
+	if !strings.HasPrefix(filePath, base) {
 		return base
 	}
 	return filePath
@@ -44,7 +42,7 @@ func JoinPath(base, file string) string {
 func EnforceDirectory(path string) string {
 	if path == "" {
 		return "/"
-	} else if path[len(path) - 1:] == "/" {
+	} else if path[len(path)-1:] == "/" {
 		return path
 	}
 	return path + "/"

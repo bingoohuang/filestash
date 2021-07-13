@@ -6,50 +6,47 @@ import (
 )
 
 const (
-	APP_VERSION = "v0.5"
-	LOG_PATH    = "data/state/log/"
-	CONFIG_PATH = "data/state/config/"
-	DB_PATH     = "data/state/db/"
-	FTS_PATH    = "data/state/search/"
-	CERT_PATH    = "data/state/certs/"
-	TMP_PATH    = "data/cache/tmp/"
-	COOKIE_NAME_AUTH = "auth"
-	COOKIE_NAME_PROOF = "proof"
-	COOKIE_NAME_ADMIN = "admin"
-	COOKIE_PATH_ADMIN = "/admin/api/"
-	COOKIE_PATH = "/api/"
-	FILE_INDEX = "./data/public/index.html"
-	FILE_ASSETS = "./data/public/"
-	URL_SETUP = "/admin/setup"
+	AppVersion      = "v0.5"
+	LogPath         = "data/state/log/"
+	ConfigPath      = "data/state/config/"
+	DbPath          = "data/state/db/"
+	FtsPath         = "data/state/search/"
+	CertPath        = "data/state/certs/"
+	TmpPath         = "data/cache/tmp/"
+	CookieNameAuth  = "auth"
+	CookieNameProof = "proof"
+	CookieNameAdmin = "admin"
+	CookiePathAdmin = "/admin/api/"
+	CookiePath      = "/api/"
+	FileIndex       = "./data/public/index.html"
+	FileAssets      = "./data/public/"
+	UrlSetup        = "/admin/setup"
 )
 
-func init(){	
-	os.MkdirAll(filepath.Join(GetCurrentDir(), LOG_PATH), os.ModePerm)
-	os.MkdirAll(filepath.Join(GetCurrentDir(), FTS_PATH), os.ModePerm)
-	os.MkdirAll(filepath.Join(GetCurrentDir(), CONFIG_PATH), os.ModePerm)
-	os.RemoveAll(filepath.Join(GetCurrentDir(), TMP_PATH))
-	os.MkdirAll(filepath.Join(GetCurrentDir(), TMP_PATH), os.ModePerm)
+func init() {
+	os.MkdirAll(filepath.Join(GetCurrentDir(), LogPath), os.ModePerm)
+	os.MkdirAll(filepath.Join(GetCurrentDir(), FtsPath), os.ModePerm)
+	os.MkdirAll(filepath.Join(GetCurrentDir(), ConfigPath), os.ModePerm)
+	os.RemoveAll(filepath.Join(GetCurrentDir(), TmpPath))
+	os.MkdirAll(filepath.Join(GetCurrentDir(), TmpPath), os.ModePerm)
 }
 
-
 var (
-	BUILD_REF    string
-	BUILD_DATE   string
-	SECRET_KEY   string
-	SECRET_KEY_DERIVATE_FOR_PROOF string
-	SECRET_KEY_DERIVATE_FOR_ADMIN string
-	SECRET_KEY_DERIVATE_FOR_USER  string
-	SECRET_KEY_DERIVATE_FOR_HASH  string
+	BuildRef                  string
+	BuildDate                 string
+	SecretKey                 string
+	SecretKeyDerivateForProof string
+	SecretKeyDerivateForAdmin string
+	SecretKeyDerivateForUser  string
+	SecretKeyDerivateForHash  string
 )
 
-/*
- * Improve security by calculating derivative of the secret key to restrict the attack surface
- * in the worst case scenario with one compromise secret key
- */
+// InitSecretDerivate Improve security by calculating derivative of the secret key to restrict the attack surface
+// in the worst case scenario with one compromise secret key
 func InitSecretDerivate(secret string) {
-	SECRET_KEY = secret
-	SECRET_KEY_DERIVATE_FOR_PROOF = Hash("PROOF_" + SECRET_KEY, len(SECRET_KEY))
-	SECRET_KEY_DERIVATE_FOR_ADMIN = Hash("ADMIN_" + SECRET_KEY, len(SECRET_KEY))
-	SECRET_KEY_DERIVATE_FOR_USER = Hash("USER_" + SECRET_KEY, len(SECRET_KEY))
-	SECRET_KEY_DERIVATE_FOR_HASH = Hash("HASH_" + SECRET_KEY, len(SECRET_KEY))
+	SecretKey = secret
+	SecretKeyDerivateForProof = Hash("PROOF_"+SecretKey, len(SecretKey))
+	SecretKeyDerivateForAdmin = Hash("ADMIN_"+SecretKey, len(SecretKey))
+	SecretKeyDerivateForUser = Hash("USER_"+SecretKey, len(SecretKey))
+	SecretKeyDerivateForHash = Hash("HASH_"+SecretKey, len(SecretKey))
 }

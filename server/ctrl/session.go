@@ -11,12 +11,12 @@ import (
 )
 
 type Session struct {
-	Home *string `json:"home,omitempty"`
-	IsAuth bool  `json:"is_authenticated"`
+	Home   *string `json:"home,omitempty"`
+	IsAuth bool    `json:"is_authenticated"`
 }
 
 func SessionGet(ctx App, res http.ResponseWriter, req *http.Request) {
-	r := Session {
+	r := Session{
 		IsAuth: false,
 	}
 
@@ -67,21 +67,21 @@ func SessionAuthenticate(ctx App, res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	s, err := json.Marshal(session);
+	s, err := json.Marshal(session)
 	if err != nil {
 		SendErrorResult(res, NewError(err.Error(), 500))
 		return
 	}
-	obfuscate, err := EncryptString(SECRET_KEY_DERIVATE_FOR_USER, string(s))
+	obfuscate, err := EncryptString(SecretKeyDerivateForUser, string(s))
 	if err != nil {
 		SendErrorResult(res, NewError(err.Error(), 500))
 		return
 	}
 	http.SetCookie(res, &http.Cookie{
-		Name:     COOKIE_NAME_AUTH,
+		Name:     CookieNameAuth,
 		Value:    obfuscate,
 		MaxAge:   60 * 60 * 24 * 30,
-		Path:     COOKIE_PATH,
+		Path:     CookiePath,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
@@ -100,22 +100,22 @@ func SessionLogout(ctx App, res http.ResponseWriter, req *http.Request) {
 		}
 	}
 	http.SetCookie(res, &http.Cookie{
-		Name:   COOKIE_NAME_AUTH,
+		Name:   CookieNameAuth,
 		Value:  "",
 		MaxAge: -1,
-		Path:   COOKIE_PATH,
+		Path:   CookiePath,
 	})
 	http.SetCookie(res, &http.Cookie{
-		Name:   COOKIE_NAME_ADMIN,
+		Name:   CookieNameAdmin,
 		Value:  "",
 		MaxAge: -1,
-		Path:   COOKIE_PATH_ADMIN,
+		Path:   CookiePathAdmin,
 	})
 	http.SetCookie(res, &http.Cookie{
-		Name:   COOKIE_NAME_PROOF,
+		Name:   CookieNameProof,
 		Value:  "",
 		MaxAge: -1,
-		Path:   COOKIE_PATH,
+		Path:   CookiePath,
 	})
 	SendSuccessResult(res, nil)
 }
@@ -131,7 +131,7 @@ func SessionOAuthBackend(ctx App, res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	obj, ok := b.(interface{ OAuthURL() string })
-	if ok == false {
+	if !ok {
 		SendErrorResult(res, NewError(fmt.Sprintf("This backend doesn't support oauth: '%s'", a["type"]), 500))
 		return
 	}

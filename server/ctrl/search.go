@@ -13,7 +13,7 @@ func FileSearch(ctx App, res http.ResponseWriter, req *http.Request) {
 		path = "/"
 	}
 	q := req.URL.Query().Get("q")
-	if model.CanRead(&ctx) == false {
+	if !model.CanRead(&ctx) {
 		SendErrorResult(res, ErrPermissionDenied)
 		return
 	}
@@ -26,7 +26,7 @@ func FileSearch(ctx App, res http.ResponseWriter, req *http.Request) {
 	}
 
 	if ctx.Session["path"] != "" {
-		for i:=0; i<len(searchResults); i++ {
+		for i := 0; i < len(searchResults); i++ {
 			searchResults[i].FPath = "/" + strings.TrimPrefix(
 				searchResults[i].FPath,
 				ctx.Session["path"],

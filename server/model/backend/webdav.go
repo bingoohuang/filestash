@@ -44,33 +44,33 @@ func (w WebDav) Init(params map[string]string, app *App) (IBackend, error) {
 func (w WebDav) LoginForm() Form {
 	return Form{
 		Elmnts: []FormElement{
-			FormElement{
-				Name:        "type",
-				Type:        "hidden",
-				Value:       "webdav",
+			{
+				Name:  "type",
+				Type:  "hidden",
+				Value: "webdav",
 			},
-			FormElement{
+			{
 				Name:        "url",
 				Type:        "text",
 				Placeholder: "Address*",
 			},
-			FormElement{
+			{
 				Name:        "username",
 				Type:        "text",
 				Placeholder: "Username",
 			},
-			FormElement{
+			{
 				Name:        "password",
 				Type:        "password",
 				Placeholder: "Password",
 			},
-			FormElement{
+			{
 				Name:        "advanced",
 				Type:        "enable",
 				Placeholder: "Advanced",
 				Target:      []string{"webdav_path"},
 			},
-			FormElement{
+			{
 				Id:          "webdav_path",
 				Name:        "path",
 				Type:        "text",
@@ -108,7 +108,7 @@ func (w WebDav) Ls(path string) ([]os.FileInfo, error) {
 		return nil, NewError("Server not found", 404)
 	}
 
-	LongURLDav := w.params.url+path
+	LongURLDav := w.params.url + path
 	ShortURLDav := regexp.MustCompile(`^http[s]?://[^/]*`).ReplaceAllString(LongURLDav, "")
 	for _, tag := range r.Responses {
 		decodedHref := decodeURL(tag.Href)

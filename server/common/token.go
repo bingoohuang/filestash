@@ -5,31 +5,20 @@ import (
 )
 
 const (
-	ADMIN_CLAIM = "ADMIN"
+	AdminClaim = "ADMIN"
 )
 
 type AdminToken struct {
-	Claim  string     `json:"token"`
-	Expire time.Time  `json:"time"`
+	Claim  string    `json:"token"`
+	Expire time.Time `json:"time"`
 }
 
 func NewAdminToken() AdminToken {
 	return AdminToken{
-		Claim: ADMIN_CLAIM,
+		Claim:  AdminClaim,
 		Expire: time.Now().Add(time.Hour * 24),
 	}
 }
 
-func (this AdminToken) IsAdmin() bool {
-	if this.Claim != ADMIN_CLAIM {
-		return false
-	}
-	return true
-}
-
-func (this AdminToken) IsValid() bool {
-	if this.Expire.Sub(time.Now()) <= 0 {
-		return false
-	}
-	return true
-}
+func (t AdminToken) IsAdmin() bool { return t.Claim == AdminClaim }
+func (t AdminToken) IsValid() bool { return t.Expire.Sub(time.Now()) > 0 }

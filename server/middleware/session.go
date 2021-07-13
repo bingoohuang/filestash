@@ -5,9 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"github.com/mickael-kerjean/filestash/server/model"
-	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
 	"strings"
@@ -26,13 +26,13 @@ func LoggedInOnly(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App
 func AdminOnly(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, res http.ResponseWriter, req *http.Request) {
 	return func(ctx App, res http.ResponseWriter, req *http.Request) {
 		if admin := Config.Get("auth.admin").String(); admin != "" {
-			c, err := req.Cookie(COOKIE_NAME_ADMIN);
+			c, err := req.Cookie(CookieNameAdmin)
 			if err != nil {
 				SendErrorResult(res, ErrPermissionDenied)
 				return
 			}
 
-			str, err := DecryptString(SECRET_KEY_DERIVATE_FOR_ADMIN, c.Value);
+			str, err := DecryptString(SecretKeyDerivateForAdmin, c.Value)
 			if err != nil {
 				SendErrorResult(res, ErrPermissionDenied)
 				return
@@ -40,7 +40,7 @@ func AdminOnly(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, r
 			token := AdminToken{}
 			json.Unmarshal([]byte(str), &token)
 
-			if token.IsValid() == false || token.IsAdmin() == false {
+			if !token.IsValid() || !token.IsAdmin() {
 				SendErrorResult(res, ErrPermissionDenied)
 				return
 			}
@@ -49,7 +49,7 @@ func AdminOnly(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, r
 	}
 }
 
-func SessionStart (fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, res http.ResponseWriter, req *http.Request) {
+func SessionStart(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, res http.ResponseWriter, req *http.Request) {
 	return func(ctx App, res http.ResponseWriter, req *http.Request) {
 		var err error
 		if ctx.Share, err = _extractShare(req); err != nil {
@@ -72,7 +72,7 @@ func SessionStart (fn func(App, http.ResponseWriter, *http.Request)) func(ctx Ap
 	}
 }
 
-func SessionTry (fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, res http.ResponseWriter, req *http.Request) {
+func SessionTry(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, res http.ResponseWriter, req *http.Request) {
 	return func(ctx App, res http.ResponseWriter, req *http.Request) {
 		ctx.Share, _ = _extractShare(req)
 		ctx.Session, _ = _extractSession(req, &ctx)
@@ -93,7 +93,7 @@ func RedirectSharedLoginIfNeeded(fn func(App, http.ResponseWriter, *http.Request
 			return
 		}
 
-		share, err := _extractShare(req);
+		share, err := _extractShare(req)
 		if err != nil || share_id != share.Id {
 			http.Redirect(res, req, fmt.Sprintf("/s/%s?next=%s", share_id, req.URL.Path), http.StatusTemporaryRedirect)
 			return
@@ -145,7 +145,7 @@ func CanManageShare(fn func(App, http.ResponseWriter, *http.Request)) func(ctx A
 		}
 
 		if s.Backend == GenerateID(&ctx) {
-			if s.CanShare == true {
+			if s.CanShare {
 				fn(ctx, res, req)
 				return
 			}
@@ -173,7 +173,7 @@ func _extractShare(req *http.Request) (Share, error) {
 	if share_id == "" {
 		return Share{}, nil
 	}
-	if Config.Get("features.share.enable").Bool() == false {
+	if !Config.Get("features.share.enable").Bool() {
 		Log.Debug("Share feature isn't enable, contact your administrator")
 		return Share{}, NewError("Feature isn't enable, contact your administrator", 405)
 	}
@@ -186,8 +186,8 @@ func _extractShare(req *http.Request) (Share, error) {
 		return Share{}, err
 	}
 
-	var verifiedProof []model.Proof = model.ShareProofGetAlreadyVerified(req)
-	username, password := func(authHeader string) (string, string){
+	var verifiedProof = model.ShareProofGetAlreadyVerified(req)
+	username, password := func(authHeader string) (string, string) {
 		decoded, err := base64.StdEncoding.DecodeString(
 			strings.TrimPrefix(authHeader, "Basic "),
 		)
@@ -203,7 +203,7 @@ func _extractShare(req *http.Request) (Share, error) {
 		if len(usr) != 3 {
 			return "", p
 		}
-		if Hash(usr[1] + SECRET_KEY_DERIVATE_FOR_HASH, 10) != usr[2] {
+		if Hash(usr[1]+SecretKeyDerivateForHash, 10) != usr[2] {
 			return "", p
 		}
 		return usr[1], p
@@ -211,16 +211,16 @@ func _extractShare(req *http.Request) (Share, error) {
 
 	if s.Users != nil && username != "" {
 		if v, ok := model.ShareProofVerifierEmail(*s.Users, username); ok {
-			verifiedProof = append(verifiedProof, model.Proof{ Key: "email", Value: v })
+			verifiedProof = append(verifiedProof, model.Proof{Key: "email", Value: v})
 		}
 	}
 	if s.Password != nil && password != "" {
 		if v, ok := model.ShareProofVerifierPassword(*s.Password, password); ok {
-			verifiedProof = append(verifiedProof, model.Proof{ Key: "password", Value: v })
+			verifiedProof = append(verifiedProof, model.Proof{Key: "password", Value: v})
 		}
 	}
-	var requiredProof []model.Proof = model.ShareProofGetRequired(s)
-	var remainingProof []model.Proof = model.ShareProofCalculateRemainings(requiredProof, verifiedProof)
+	var requiredProof = model.ShareProofGetRequired(s)
+	var remainingProof = model.ShareProofCalculateRemainings(requiredProof, verifiedProof)
 	if len(remainingProof) != 0 {
 		return Share{}, NewError("Unauthorized Shared space", 400)
 	}
@@ -230,10 +230,10 @@ func _extractShare(req *http.Request) (Share, error) {
 func _extractSession(req *http.Request, ctx *App) (map[string]string, error) {
 	var str string
 	var err error
-	var session map[string]string = make(map[string]string)
+	var session = make(map[string]string)
 
 	if ctx.Share.Id != "" {
-		str, err = DecryptString(SECRET_KEY_DERIVATE_FOR_USER, ctx.Share.Auth)
+		str, err = DecryptString(SecretKeyDerivateForUser, ctx.Share.Auth)
 		if err != nil {
 			// This typically happen when changing the secret key
 			return session, nil
@@ -244,24 +244,24 @@ func _extractSession(req *http.Request, ctx *App) (map[string]string, error) {
 		} else {
 			// when the shared link is pointing to a file, we mustn't have access to the surroundings
 			// => we need to take extra care of which path to use as a chroot
-			var path string = req.URL.Query().Get("path")
-			if strings.HasPrefix(req.URL.Path, "/api/export/") == true {
+			var path = req.URL.Query().Get("path")
+			if strings.HasPrefix(req.URL.Path, "/api/export/") {
 				var re = regexp.MustCompile(`^/api/export/[^\/]+/[^\/]+/[^\/]+(\/.+)$`)
 				path = re.ReplaceAllString(req.URL.Path, `$1`)
 			}
-			if strings.HasSuffix(ctx.Share.Path, path) == false {
+			if !strings.HasSuffix(ctx.Share.Path, path) {
 				return make(map[string]string), ErrPermissionDenied
 			}
 			session["path"] = strings.TrimSuffix(ctx.Share.Path, path) + "/"
 		}
 		return session, err
 	} else {
-		cookie, err := req.Cookie(COOKIE_NAME_AUTH)
+		cookie, err := req.Cookie(CookieNameAuth)
 		if err != nil {
 			return session, nil
 		}
 		str = cookie.Value
-		str, err = DecryptString(SECRET_KEY_DERIVATE_FOR_USER, str)
+		str, err = DecryptString(SecretKeyDerivateForUser, str)
 		if err != nil {
 			// This typically happen when changing the secret key
 			return session, nil

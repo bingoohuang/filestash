@@ -56,52 +56,52 @@ func (s S3Backend) Init(params map[string]string, app *App) (IBackend, error) {
 func (s S3Backend) LoginForm() Form {
 	return Form{
 		Elmnts: []FormElement{
-			FormElement{
+			{
 				Name:  "type",
 				Type:  "hidden",
 				Value: "s3",
 			},
-			FormElement{
+			{
 				Name:        "access_key_id",
 				Type:        "text",
 				Placeholder: "Access Key ID*",
 			},
-			FormElement{
+			{
 				Name:        "secret_access_key",
 				Type:        "text",
 				Placeholder: "Secret Access Key*",
 			},
-			FormElement{
+			{
 				Name:        "advanced",
 				Type:        "enable",
 				Placeholder: "Advanced",
 				Target:      []string{"s3_path", "s3_session_token", "s3_encryption_key", "s3_region", "s3_endpoint"},
 			},
-			FormElement{
+			{
 				Id:          "s3_session_token",
 				Name:        "session_token",
 				Type:        "text",
 				Placeholder: "Session Token",
 			},
-			FormElement{
+			{
 				Id:          "s3_path",
 				Name:        "path",
 				Type:        "text",
 				Placeholder: "Path",
 			},
-			FormElement{
+			{
 				Id:          "s3_encryption_key",
 				Name:        "encryption_key",
 				Type:        "text",
 				Placeholder: "Encryption Key",
 			},
-			FormElement{
+			{
 				Id:          "s3_region",
 				Name:        "region",
 				Type:        "text",
 				Placeholder: "Region",
 			},
-			FormElement{
+			{
 				Id:          "s3_endpoint",
 				Name:        "endpoint",
 				Type:        "text",
@@ -189,7 +189,7 @@ func (s S3Backend) Cat(path string) (io.ReadCloser, error) {
 	obj, err := client.GetObject(input)
 	if err != nil {
 		awsErr, ok := err.(awserr.Error)
-		if ok == false {
+		if !ok {
 			return nil, err
 		}
 		if awsErr.Code() == "InvalidRequest" && strings.Contains(awsErr.Message(), "encryption") {
@@ -230,7 +230,7 @@ func (s S3Backend) Rm(path string) error {
 	client := s3.New(s.createSession(p.bucket))
 	if p.bucket == "" {
 		return ErrNotFound
-	} else if strings.HasSuffix(path, "/") == false {
+	} else if !strings.HasSuffix(path, "/") {
 		_, err := client.DeleteObject(&s3.DeleteObjectInput{
 			Bucket: aws.String(p.bucket),
 			Key:    aws.String(p.path),

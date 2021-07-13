@@ -1,14 +1,17 @@
 plg_image_light rely on a few libraries for:
+
 - image transcoding: libtranscode.a: a library build on top of of libraw
 - image resizing: libresize.a: a library built on top of libvips
 
 To create the libraries to be used by Filestash:
+
 ```
 ./create_libtranscode.sh
 ./create_libresize.sh
 ```
 
 To test the libraries are working fine:
+
 ```
 # libtranscode:
 gcc -Wall -c src/libtranscode_test.c

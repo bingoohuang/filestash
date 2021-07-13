@@ -3,16 +3,16 @@ package common
 import (
 	"crypto/tls"
 	"fmt"
-	"net/http"
 	"net"
+	"net/http"
 	"time"
 )
 
-var USER_AGENT = fmt.Sprintf("Filestash/%s.%s (http://filestash.app)", APP_VERSION, BUILD_DATE)
+var UserAgent = fmt.Sprintf("Filestash/%s.%s (http://filestash.app)", AppVersion, BuildDate)
 
 var HTTPClient = http.Client{
 	Timeout: 5 * time.Hour,
-	Transport: NewTransormedTransport(http.Transport{
+	Transport: NewTransformedTransport(http.Transport{
 		Dial: (&net.Dialer{
 			Timeout:   10 * time.Second,
 			KeepAlive: 10 * time.Second,
@@ -25,7 +25,7 @@ var HTTPClient = http.Client{
 
 var HTTP = http.Client{
 	Timeout: 10000 * time.Millisecond,
-	Transport: NewTransormedTransport(http.Transport{
+	Transport: NewTransformedTransport(http.Transport{
 		Dial: (&net.Dialer{
 			Timeout:   5000 * time.Millisecond,
 			KeepAlive: 5000 * time.Millisecond,
@@ -53,13 +53,15 @@ var DefaultTLSConfig = tls.Config{
 	},
 }
 
-func NewTransormedTransport(transport http.Transport) http.RoundTripper {
-	return &TransformedTransport{ &transport }
+func NewTransformedTransport(transport http.Transport) http.RoundTripper {
+	return &TransformedTransport{&transport}
 }
+
 type TransformedTransport struct {
 	Orig http.RoundTripper
 }
-func (this *TransformedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("User-Agent", USER_AGENT)
-	return this.Orig.RoundTrip(req)
+
+func (t *TransformedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Add("User-Agent", UserAgent)
+	return t.Orig.RoundTrip(req)
 }

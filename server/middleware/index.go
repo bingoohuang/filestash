@@ -3,18 +3,18 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
-	"net/http"
 	. "github.com/mickael-kerjean/filestash/server/common"
-	"time"
+	"net/http"
 	"sync"
+	"time"
 )
 
 type Middleware func(func(App, http.ResponseWriter, *http.Request)) func(App, http.ResponseWriter, *http.Request)
 
-func NewMiddlewareChain(fn func(App, http.ResponseWriter, *http.Request), m []Middleware, app App) http.HandlerFunc {
+func Chain(fn func(App, http.ResponseWriter, *http.Request), app App, m ...Middleware) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
-		var resw ResponseWriter                             = NewResponseWriter(res)
-		var f func(App, http.ResponseWriter, *http.Request) = fn
+		resw := NewResponseWriter(res)
+		f := fn
 
 		for i := len(m) - 1; i >= 0; i-- {
 			f = m[i](f)
@@ -36,7 +36,7 @@ type ResponseWriter struct {
 func NewResponseWriter(res http.ResponseWriter) ResponseWriter {
 	return ResponseWriter{
 		ResponseWriter: res,
-		start: time.Now(),
+		start:          time.Now(),
 	}
 }
 
@@ -53,24 +53,24 @@ func (w *ResponseWriter) Write(b []byte) (int, error) {
 }
 
 type LogEntry struct {
-	Host       string    `json:"host"`
-	Method     string    `json:"method"`
-	RequestURI string    `json:"pathname"`
-	Proto      string    `json:"proto"`
-	Status     int       `json:"status"`
-	Scheme     string    `json:"scheme"`
-	UserAgent  string    `json:"userAgent"`
-	Ip         string    `json:"ip"`
-	Referer    string    `json:"referer"`
-	Duration   float64   `json:"responseTime"`
-	Version    string    `json:"version"`
-	Backend    string    `json:"backend"`
+	Host       string  `json:"host"`
+	Method     string  `json:"method"`
+	RequestURI string  `json:"pathname"`
+	Proto      string  `json:"proto"`
+	Status     int     `json:"status"`
+	Scheme     string  `json:"scheme"`
+	UserAgent  string  `json:"userAgent"`
+	Ip         string  `json:"ip"`
+	Referer    string  `json:"referer"`
+	Duration   float64 `json:"responseTime"`
+	Version    string  `json:"version"`
+	Backend    string  `json:"backend"`
 }
 
 func Logger(ctx App, res http.ResponseWriter, req *http.Request) {
 	if obj, ok := res.(*ResponseWriter); ok && req.RequestURI != "/about" {
 		point := LogEntry{
-			Version:    APP_VERSION,
+			Version:    AppVersion,
 			Scheme:     req.URL.Scheme,
 			Host:       req.Host,
 			Method:     req.Method,
@@ -97,22 +97,21 @@ type Telemetry struct {
 	mu   sync.Mutex
 }
 
-func (this *Telemetry) Record(point LogEntry) {
-	this.mu.Lock()
-	this.Data = append(this.Data, point)
-	this.mu.Unlock()
+func (t *Telemetry) Record(point LogEntry) {
+	t.mu.Lock()
+	t.Data = append(t.Data, point)
+	t.mu.Unlock()
 }
 
-func (this *Telemetry) Flush() {
-	if len(this.Data) == 0 {
+func (t *Telemetry) Flush() {
+	if len(t.Data) == 0 {
 		return
 	}
-	this.mu.Lock()
-	pts := this.Data
-	this.Data = make([]LogEntry, 0)
-	this.mu.Unlock()
+	t.mu.Lock()
+	body, err := json.Marshal(t.Data)
+	t.Data = t.Data[:0]
+	t.mu.Unlock()
 
-	body, err := json.Marshal(pts)
 	if err != nil {
 		return
 	}
@@ -130,10 +129,10 @@ func (this *Telemetry) Flush() {
 	resp.Body.Close()
 }
 
-var telemetry Telemetry = Telemetry{ Data: make([]LogEntry, 0) }
+var telemetry = Telemetry{Data: make([]LogEntry, 0)}
 
-func init(){
-	go func(){
+func init() {
+	go func() {
 		for {
 			time.Sleep(10 * time.Second)
 			telemetry.Flush()

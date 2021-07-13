@@ -20,31 +20,32 @@ import (
 )
 
 const (
-	PHASE_EXPLORE      = "PHASE_EXPLORE"
-	PHASE_INDEXING     = "PHASE_INDEXING"
-	PHASE_MAINTAIN     = "PHASE_MAINTAIN"
-	PHASE_PAUSE        = "PHASE_PAUSE"
-	MAX_HEAP_SIZE      = 100000
-)
-var (
-	SEARCH_ENABLE func() bool
-	SEARCH_TIMEOUT func() time.Duration
-	SEARCH_PROCESS_MAX func() int
-	SEARCH_PROCESS_PAR func() int
-	SEARCH_REINDEX func() int
-	CYCLE_TIME func() int
-	INDEXING_EXT func() string
-	MAX_INDEXING_FSIZE func() int
-	INDEXING_EXCLUSION = []string{"/node_modules/", "/bower_components/", "/.cache/", "/.npm/", "/.git/"}
+	PhaseExplore  = "PHASE_EXPLORE"
+	PhaseIndexing = "PHASE_INDEXING"
+	PhaseMaintain = "PHASE_MAINTAIN"
+	PhasePause    = "PHASE_PAUSE"
+	MaxHeapSize   = 100000
 )
 
-var SProc SearchProcess = SearchProcess{
+var (
+	SearchEnable      func() bool
+	SearchTimeout     func() time.Duration
+	SearchProcessMax  func() int
+	SearchProcessPar  func() int
+	SearchReindex     func() int
+	CycleTime         func() int
+	IndexingExt       func() string
+	MaxIndexingFsize  func() int
+	IndexingExclusion = []string{"/node_modules/", "/bower_components/", "/.cache/", "/.npm/", "/.git/"}
+)
+
+var SProc = SearchProcess{
 	idx: make([]SearchIndexer, 0),
 	n:   -1,
 }
 
-func init(){
-	SEARCH_ENABLE = func() bool {
+func init() {
+	SearchEnable = func() bool {
 		return Config.Get("features.search.enable").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -58,8 +59,8 @@ func init(){
 			return f
 		}).Bool()
 	}
-	SEARCH_ENABLE()
-	SEARCH_TIMEOUT = func() time.Duration {
+	SearchEnable()
+	SearchTimeout = func() time.Duration {
 		return time.Duration(Config.Get("features.search.explore_timeout").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -73,8 +74,8 @@ func init(){
 			return f
 		}).Int()) * time.Millisecond
 	}
-	SEARCH_TIMEOUT()
-	SEARCH_PROCESS_MAX = func() int {
+	SearchTimeout()
+	SearchProcessMax = func() int {
 		return Config.Get("features.search.process_max").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -88,8 +89,8 @@ func init(){
 			return f
 		}).Int()
 	}
-	SEARCH_PROCESS_MAX()
-	SEARCH_PROCESS_PAR = func() int {
+	SearchProcessMax()
+	SearchProcessPar = func() int {
 		return Config.Get("features.search.process_par").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -103,8 +104,8 @@ func init(){
 			return f
 		}).Int()
 	}
-	SEARCH_PROCESS_PAR()
-	SEARCH_REINDEX = func() int {
+	SearchProcessPar()
+	SearchReindex = func() int {
 		return Config.Get("features.search.reindex_time").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -118,8 +119,8 @@ func init(){
 			return f
 		}).Int()
 	}
-	SEARCH_REINDEX()
-	CYCLE_TIME = func() int {
+	SearchReindex()
+	CycleTime = func() int {
 		return Config.Get("features.search.cycle_time").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -133,8 +134,8 @@ func init(){
 			return f
 		}).Int()
 	}
-	CYCLE_TIME()
-	MAX_INDEXING_FSIZE = func() int {
+	CycleTime()
+	MaxIndexingFsize = func() int {
 		return Config.Get("features.search.max_size").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -148,8 +149,8 @@ func init(){
 			return f
 		}).Int()
 	}
-	MAX_INDEXING_FSIZE()
-	INDEXING_EXT = func() string {
+	MaxIndexingFsize()
+	IndexingExt = func() string {
 		return Config.Get("features.search.indexer_ext").Schema(func(f *FormElement) *FormElement {
 			if f == nil {
 				f = &FormElement{}
@@ -163,17 +164,18 @@ func init(){
 			return f
 		}).String()
 	}
-	INDEXING_EXT()
+	IndexingExt()
 
 	onChange := Config.ListenForChange()
 	runner := func() {
 		startSearch := false
 		for {
-			if SEARCH_ENABLE() == false {
+			if !SearchEnable() {
 				select {
-				case <- onChange.Listener: startSearch = SEARCH_ENABLE()
+				case <-onChange.Listener:
+					startSearch = SearchEnable()
 				}
-				if startSearch == false {
+				if !startSearch {
 					continue
 				}
 			}
@@ -187,13 +189,13 @@ func init(){
 			sidx.mu.Unlock()
 		}
 	}
-	for i:=0; i<SEARCH_PROCESS_PAR(); i++ {
+	for i := 0; i < SearchProcessPar(); i++ {
 		go runner()
 	}
 }
 
 func SearchStateful(app *App, path string, keyword string) []File {
-	var files []File = make([]File, 0)
+	var files = make([]File, 0)
 
 	// extract our search indexer
 	s := SProc.HintLs(app, path)
@@ -206,12 +208,12 @@ func SearchStateful(app *App, path string, keyword string) []File {
 	}
 
 	rows, err := s.DB.Query(
-		"SELECT type, path, size, modTime FROM file WHERE path IN (" +
-		"   SELECT path FROM file_index WHERE file_index MATCH ? AND path > ? AND path < ?" +
-		"   ORDER BY rank LIMIT 2000" +
-		")",
+		"SELECT type, path, size, modTime FROM file WHERE path IN ("+
+			"   SELECT path FROM file_index WHERE file_index MATCH ? AND path > ? AND path < ?"+
+			"   ORDER BY rank LIMIT 2000"+
+			")",
 		regexp.MustCompile(`(\.|\-)`).ReplaceAllString(keyword, "\"$1\""),
-		path, path + "~",
+		path, path+"~",
 	)
 	if err != nil {
 		return files
@@ -239,108 +241,106 @@ type SearchProcess struct {
 	mu  sync.RWMutex
 }
 
-func(this *SearchProcess) HintLs(app *App, path string) *SearchIndexer {
+func (p *SearchProcess) HintLs(app *App, path string) *SearchIndexer {
 	id := GenerateID(app)
 
 	// try to find the search indexer among the existing ones
-	this.mu.RLock()
-	for i:=len(this.idx)-1; i>=0; i-- {
-		if id == this.idx[i].Id {
+	p.mu.RLock()
+	for i := len(p.idx) - 1; i >= 0; i-- {
+		if id == p.idx[i].Id {
 			alreadyHasPath := false
-			for j:=0; j<len(this.idx[i].FoldersUnknown); j++ {
-				if this.idx[i].FoldersUnknown[j].Path == path {
+			for j := 0; j < len(p.idx[i].FoldersUnknown); j++ {
+				if p.idx[i].FoldersUnknown[j].Path == path {
 					alreadyHasPath = true
 					break
 				}
 			}
-			if alreadyHasPath == false {
-				heap.Push(&this.idx[i].FoldersUnknown, &Document{
-					Type: "directory",
-					Path: path,
+			if !alreadyHasPath {
+				heap.Push(&p.idx[i].FoldersUnknown, &Document{
+					Type:        "directory",
+					Path:        path,
 					InitialPath: path,
-					Name: filepath.Base(path),
+					Name:        filepath.Base(path),
 				})
 			}
-			ret := &this.idx[i]
-			this.mu.RUnlock()
+			ret := &p.idx[i]
+			p.mu.RUnlock()
 			return ret
 		}
 	}
-	this.mu.RUnlock()
-
+	p.mu.RUnlock()
 
 	// Having all indexers running in memory could be expensive => instead we're cycling a pool
-	search_process_max := SEARCH_PROCESS_MAX()
-	this.mu.Lock()
-	lenIdx := len(this.idx)
-	if lenIdx > 0 && search_process_max > 0 && lenIdx > ( search_process_max - 1) {
-		toDel := this.idx[0 : lenIdx - ( search_process_max - 1)]
+	search_process_max := SearchProcessMax()
+	p.mu.Lock()
+	lenIdx := len(p.idx)
+	if lenIdx > 0 && search_process_max > 0 && lenIdx > (search_process_max-1) {
+		toDel := p.idx[0 : lenIdx-(search_process_max-1)]
 		for i := range toDel {
 			toDel[i].DB.Close()
 		}
-		this.idx = this.idx[lenIdx - ( search_process_max - 1) :]
+		p.idx = p.idx[lenIdx-(search_process_max-1):]
 	}
 	// instantiate the new indexer
 	s := NewSearchIndexer(id, app.Backend)
 	heap.Push(&s.FoldersUnknown, &Document{
-		Type: "directory",
-		Path: path,
+		Type:        "directory",
+		Path:        path,
 		InitialPath: path,
-		Name: filepath.Base(path),
+		Name:        filepath.Base(path),
 	})
-	this.idx = append(this.idx, s)
-	this.mu.Unlock()
+	p.idx = append(p.idx, s)
+	p.mu.Unlock()
 	return &s
 }
 
-func(this *SearchProcess) HintRm(app *App, path string) {
+func (p *SearchProcess) HintRm(app *App, path string) {
 	id := GenerateID(app)
-	this.mu.RLock()
-	for i:=len(this.idx)-1; i>=0; i-- {
-		if id == this.idx[i].Id {
-			this.idx[i].DB.Exec("DELETE FROM file WHERE path >= ? AND path < ?", path, path + "~")
+	p.mu.RLock()
+	for i := len(p.idx) - 1; i >= 0; i-- {
+		if id == p.idx[i].Id {
+			p.idx[i].DB.Exec("DELETE FROM file WHERE path >= ? AND path < ?", path, path+"~")
 			break
 		}
 	}
-	this.mu.RUnlock()
+	p.mu.RUnlock()
 }
 
-func(this *SearchProcess) HintFile(app *App, path string) {
+func (p *SearchProcess) HintFile(app *App, path string) {
 	id := GenerateID(app)
-	this.mu.RLock()
-	for i:=len(this.idx)-1; i>=0; i-- {
-		if id == this.idx[i].Id {
-			this.idx[i].DB.Exec("UPDATE file set indexTime = NULL WHERE path = ?", path)
+	p.mu.RLock()
+	for i := len(p.idx) - 1; i >= 0; i-- {
+		if id == p.idx[i].Id {
+			p.idx[i].DB.Exec("UPDATE file set indexTime = NULL WHERE path = ?", path)
 			break
 		}
 	}
-	this.mu.RUnlock()
+	p.mu.RUnlock()
 }
 
-
-func(this *SearchProcess) Peek() *SearchIndexer {
-	if len(this.idx) == 0 {
+func (p *SearchProcess) Peek() *SearchIndexer {
+	if len(p.idx) == 0 {
 		return nil
 	}
-	this.mu.Lock()
-	if this.n >= len(this.idx) - 1 || this.n < 0 {
-		this.n = 0
+	p.mu.Lock()
+	if p.n >= len(p.idx)-1 || p.n < 0 {
+		p.n = 0
 	} else {
-		this.n = this.n + 1
+		p.n = p.n + 1
 	}
-	s := &this.idx[this.n]
-	this.mu.Unlock()
+	s := &p.idx[p.n]
+	p.mu.Unlock()
 	return s
 }
 
-func(this *SearchProcess) Reset() {
-	this.mu.Lock()
-	for i := range this.idx {
-		this.idx[i].DB.Close()
+func (p *SearchProcess) Reset() {
+	p.mu.Lock()
+	for i := range p.idx {
+		p.idx[i].DB.Close()
 	}
-	this.idx = make([]SearchIndexer, 0)
-	this.mu.Unlock()
-	this.n = -1
+	p.idx = make([]SearchIndexer, 0)
+	p.mu.Unlock()
+	p.n = -1
 }
 
 type SearchIndexer struct {
@@ -355,22 +355,22 @@ type SearchIndexer struct {
 }
 
 func NewSearchIndexer(id string, b IBackend) SearchIndexer {
-	s := SearchIndexer {
-		DBPath:  filepath.Join(GetCurrentDir(), FTS_PATH, "fts_" + id + ".sql"),
-		Id:      id,
-		Backend: b,
+	s := SearchIndexer{
+		DBPath:         filepath.Join(GetCurrentDir(), FtsPath, "fts_"+id+".sql"),
+		Id:             id,
+		Backend:        b,
 		FoldersUnknown: make(HeapDoc, 0, 1),
 	}
 	heap.Init(&s.FoldersUnknown)
 
-	db, err := sql.Open("sqlite3", s.DBPath + "?_journal_mode=wal")
+	db, err := sql.Open("sqlite3", s.DBPath+"?_journal_mode=wal")
 	if err != nil {
 		Log.Warning("search::init can't open database (%v)", err)
 		return s
 	}
 	s.DB = db
 	queryDB := func(sqlQuery string) error {
-		stmt, err := db.Prepare(sqlQuery);
+		stmt, err := db.Prepare(sqlQuery)
 		if err != nil {
 			Log.Warning("search::initschema prepare schema error(%v)", err)
 			return err
@@ -407,25 +407,25 @@ func NewSearchIndexer(id string, b IBackend) SearchIndexer {
 	return s
 }
 
-func(this *SearchIndexer) Execute(){
-	if this.CurrentPhase == "" {
+func (s *SearchIndexer) Execute() {
+	if s.CurrentPhase == "" {
 		time.Sleep(1 * time.Second)
-		this.CurrentPhase = PHASE_EXPLORE
+		s.CurrentPhase = PhaseExplore
 	}
-	Log.Debug("Search::indexing Execute %s", this.CurrentPhase)
+	Log.Debug("Search::indexing Execute %s", s.CurrentPhase)
 
 	cycleExecute := func(fn func(*sql.Tx) bool) {
-		stopTime := time.Now().Add(time.Duration(CYCLE_TIME()) * time.Second)
-		tx, err := this.DB.Begin()
+		stopTime := time.Now().Add(time.Duration(CycleTime()) * time.Second)
+		tx, err := s.DB.Begin()
 		if err != nil {
 			Log.Warning("search::index cycle_begin (%+v)", err)
 			time.Sleep(5 * time.Second)
 		}
 		for {
-			if fn(tx) == false {
+			if !fn(tx) {
 				break
 			}
-			if stopTime.After(time.Now()) == false {
+			if !stopTime.After(time.Now()) {
 				break
 			}
 		}
@@ -433,36 +433,36 @@ func(this *SearchIndexer) Execute(){
 			Log.Warning("search::index cycle_commit (%+v)", err)
 		}
 	}
-	if this.CurrentPhase == PHASE_EXPLORE {
-		cycleExecute(this.Discover)
+	if s.CurrentPhase == PhaseExplore {
+		cycleExecute(s.Discover)
 		return
-	} else if this.CurrentPhase == PHASE_INDEXING {
-		cycleExecute(this.Indexing)
+	} else if s.CurrentPhase == PhaseIndexing {
+		cycleExecute(s.Indexing)
 		return
-	} else if this.CurrentPhase == PHASE_MAINTAIN {
-		cycleExecute(this.Consolidate)
+	} else if s.CurrentPhase == PhaseMaintain {
+		cycleExecute(s.Consolidate)
 		return
-	} else if this.CurrentPhase == PHASE_PAUSE {
+	} else if s.CurrentPhase == PhasePause {
 		time.Sleep(5 * time.Second)
-		this.CurrentPhase = ""
+		s.CurrentPhase = ""
 	}
 	return
 }
 
-func(this *SearchIndexer) Discover(tx *sql.Tx) bool {
-	if this.FoldersUnknown.Len() == 0 {
-		this.CurrentPhase = PHASE_INDEXING
+func (s *SearchIndexer) Discover(tx *sql.Tx) bool {
+	if s.FoldersUnknown.Len() == 0 {
+		s.CurrentPhase = PhaseIndexing
 		return false
 	}
 	var doc *Document
-	doc = heap.Pop(&this.FoldersUnknown).(*Document)
+	doc = heap.Pop(&s.FoldersUnknown).(*Document)
 	if doc == nil {
-		this.CurrentPhase = PHASE_INDEXING
+		s.CurrentPhase = PhaseIndexing
 		return false
 	}
-	files, err := this.Backend.Ls(doc.Path)
+	files, err := s.Backend.Ls(doc.Path)
 	if err != nil {
-		this.CurrentPhase = ""
+		s.CurrentPhase = ""
 		return true
 	}
 	if len(files) == 0 {
@@ -472,24 +472,24 @@ func(this *SearchIndexer) Discover(tx *sql.Tx) bool {
 	// We don't want our indexer to go wild and diverge over time. As such we need to detect those edge cases: aka
 	// recursive folder structure. Our detection is relying on a Hash of []os.FileInfo
 	hashFiles := func() string {
-		var step int = len(files) / 50
+		var step = len(files) / 50
 		if step == 0 {
 			step = 1
 		}
 		hasher := fnv.New32()
 		hasher.Write([]byte(strconv.Itoa(len(files))))
-		for i:=0; i<len(files); i = i+step {
+		for i := 0; i < len(files); i = i + step {
 			hasher.Write([]byte(files[i].Name()))
 		}
 		return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 	}()
-	if hashFiles == this.lastHash {
+	if hashFiles == s.lastHash {
 		return true
 	}
-	this.lastHash = ""
-	for i:=0; i<this.FoldersUnknown.Len(); i++ {
-		if this.FoldersUnknown[i].Hash == hashFiles && filepath.Base(doc.Path) != filepath.Base(this.FoldersUnknown[i].Path) {
-			this.lastHash = hashFiles
+	s.lastHash = ""
+	for i := 0; i < s.FoldersUnknown.Len(); i++ {
+		if s.FoldersUnknown[i].Hash == hashFiles && filepath.Base(doc.Path) != filepath.Base(s.FoldersUnknown[i].Path) {
+			s.lastHash = hashFiles
 			return true
 		}
 	}
@@ -499,13 +499,13 @@ func(this *SearchIndexer) Discover(tx *sql.Tx) bool {
 		f := files[i]
 		name := f.Name()
 		if f.IsDir() {
-			var performPush bool = false
+			var performPush = false
 			p := filepath.Join(doc.Path, name)
 			p += "/"
-			if err = this.dbInsert(doc.Path, f, tx); err == nil {
+			if err = s.dbInsert(doc.Path, f, tx); err == nil {
 				performPush = true
 			} else if e, ok := err.(sqlite3.Error); ok && e.Code == sqlite3.ErrConstraint {
-				performPush = func(path string) bool{
+				performPush = func(path string) bool {
 					var t string
 					var err error
 					if err := tx.QueryRow("SELECT indexTime FROM file WHERE path = ?", p).Scan(&t); err != nil {
@@ -517,7 +517,7 @@ func(this *SearchIndexer) Discover(tx *sql.Tx) bool {
 						Log.Warning("search::discovery invalid_time (%v)", err)
 						return false
 					}
-					if time.Now().Add(time.Duration(- SEARCH_REINDEX()) * time.Hour).Before(tm) {
+					if time.Now().Add(time.Duration(- SearchReindex()) * time.Hour).Before(tm) {
 						return false
 					}
 					if _, err = tx.Exec("UPDATE file SET indexTime = ? WHERE path = ?", time.Now(), p); err != nil {
@@ -529,18 +529,18 @@ func(this *SearchIndexer) Discover(tx *sql.Tx) bool {
 			} else {
 				Log.Error("search::indexing insert_index (%v)", err)
 			}
-			if performPush == true {
-				heap.Push(&this.FoldersUnknown, &Document{
-					Type: "directory",
-					Name: name,
-					Path: p,
-					Size: f.Size(),
+			if performPush {
+				heap.Push(&s.FoldersUnknown, &Document{
+					Type:    "directory",
+					Name:    name,
+					Path:    p,
+					Size:    f.Size(),
 					ModTime: f.ModTime(),
-					Hash: hashFiles,
+					Hash:    hashFiles,
 				})
 			}
 		} else {
-			if err = this.dbInsert(doc.Path, f, tx); err != nil {
+			if err = s.dbInsert(doc.Path, f, tx); err != nil {
 				if e, ok := err.(sqlite3.Error); ok && e.Code == sqlite3.ErrConstraint {
 					return false
 				}
@@ -552,17 +552,17 @@ func(this *SearchIndexer) Discover(tx *sql.Tx) bool {
 	return true
 }
 
-func(this *SearchIndexer) Indexing(tx *sql.Tx) bool {
-	ext := strings.Split(INDEXING_EXT(), ",")
-	for i:=0; i<len(ext); i++ {
+func (s *SearchIndexer) Indexing(tx *sql.Tx) bool {
+	ext := strings.Split(IndexingExt(), ",")
+	for i := 0; i < len(ext); i++ {
 		ext[i] = "'" + strings.TrimSpace(ext[i]) + "'"
 	}
 
 	rows, err := tx.Query(
-		"SELECT path FROM file WHERE (" +
-		"  type = 'file' AND size < ? AND filetype IN (" + strings.Join(ext, ",") +") AND indexTime IS NULL " +
-		") LIMIT 2",
-		MAX_INDEXING_FSIZE(),
+		"SELECT path FROM file WHERE ("+
+			"  type = 'file' AND size < ? AND filetype IN ("+strings.Join(ext, ",")+") AND indexTime IS NULL "+
+			") LIMIT 2",
+		MaxIndexingFsize(),
 	)
 	if err != nil {
 		Log.Warning("search::insert index_query (%v)", err)
@@ -577,31 +577,31 @@ func(this *SearchIndexer) Indexing(tx *sql.Tx) bool {
 			Log.Warning("search::indexing index_scan (%v)", err)
 			return false
 		}
-		if err = this.updateFile(path, tx); err != nil {
+		if err = s.updateFile(path, tx); err != nil {
 			Log.Warning("search::indexing index_update (%v)", err)
 			return false
 		}
 	}
 
 	if i == 0 {
-		this.CurrentPhase = PHASE_MAINTAIN
+		s.CurrentPhase = PhaseMaintain
 		return false
 	}
 	return true
 }
 
-func(this *SearchIndexer) updateFile(path string, tx *sql.Tx) error {
+func (s *SearchIndexer) updateFile(path string, tx *sql.Tx) error {
 	if _, err := tx.Exec("UPDATE file SET indexTime = ? WHERE path = ?", time.Now(), path); err != nil {
 		return err
 	}
 
-	for i:=0; i<len(INDEXING_EXCLUSION); i++ {
-		if strings.Contains(path, INDEXING_EXCLUSION[i]) {
+	for i := 0; i < len(IndexingExclusion); i++ {
+		if strings.Contains(path, IndexingExclusion[i]) {
 			return nil
 		}
 	}
 
-	reader, err := this.Backend.Cat(path)
+	reader, err := s.Backend.Cat(path)
 	if err != nil {
 		if _, a := tx.Exec("DELETE FROM file WHERE path = ?", path); a != nil {
 			return a
@@ -611,16 +611,26 @@ func(this *SearchIndexer) updateFile(path string, tx *sql.Tx) error {
 	defer reader.Close()
 
 	switch GetMimeType(path) {
-	case "text/plain": reader, err = formater.TxtFormater(reader)
-	case "text/org": reader, err = formater.TxtFormater(reader)
-	case "text/markdown": reader, err = formater.TxtFormater(reader)
-	case "application/x-form": reader, err = formater.TxtFormater(reader)
-	case "application/pdf": reader, err = formater.PdfFormater(reader)
-	case "application/powerpoint": reader, err = formater.OfficeFormater(reader)
-	case "application/vnd.ms-powerpoint": reader, err = formater.OfficeFormater(reader)
-	case "application/word": reader, err = formater.OfficeFormater(reader)
-	case "application/msword": reader, err = formater.OfficeFormater(reader)
-	default: return nil
+	case "text/plain":
+		reader, err = formater.TxtFormater(reader)
+	case "text/org":
+		reader, err = formater.TxtFormater(reader)
+	case "text/markdown":
+		reader, err = formater.TxtFormater(reader)
+	case "application/x-form":
+		reader, err = formater.TxtFormater(reader)
+	case "application/pdf":
+		reader, err = formater.PdfFormater(reader)
+	case "application/powerpoint":
+		reader, err = formater.OfficeFormater(reader)
+	case "application/vnd.ms-powerpoint":
+		reader, err = formater.OfficeFormater(reader)
+	case "application/word":
+		reader, err = formater.OfficeFormater(reader)
+	case "application/msword":
+		reader, err = formater.OfficeFormater(reader)
+	default:
+		return nil
 	}
 
 	if err != nil {
@@ -638,21 +648,21 @@ func(this *SearchIndexer) updateFile(path string, tx *sql.Tx) error {
 	return nil
 }
 
-func(this *SearchIndexer) updateFolder(path string, tx *sql.Tx) error {
+func (s *SearchIndexer) updateFolder(path string, tx *sql.Tx) error {
 	if _, err := tx.Exec("UPDATE file SET indexTime = ? WHERE path = ?", time.Now(), path); err != nil {
 		return err
 	}
 
-	for i:=0; i<len(INDEXING_EXCLUSION); i++ {
-		if strings.Contains(path, INDEXING_EXCLUSION[i]) {
+	for i := 0; i < len(IndexingExclusion); i++ {
+		if strings.Contains(path, IndexingExclusion[i]) {
 			return nil
 		}
 	}
 
 	// Fetch list of folders as in the remote filesystem
-	currFiles, err := this.Backend.Ls(path)
+	currFiles, err := s.Backend.Ls(path)
 	if err != nil {
-		tx.Exec("DELETE FROM file WHERE path >= ? AND path < ?", path, path + "~")
+		tx.Exec("DELETE FROM file WHERE path >= ? AND path < ?", path, path+"~")
 		return err
 	}
 
@@ -671,13 +681,13 @@ func(this *SearchIndexer) updateFolder(path string, tx *sql.Tx) error {
 
 	// Perform the DB operation to ensure previousFiles and currFiles are in sync
 	// 1. Find the content that have been created and did not exist before
-	for i:=0; i<len(currFiles); i++ {
+	for i := 0; i < len(currFiles); i++ {
 		currFilenameAlreadyExist := false
 		currFilename := currFiles[i].Name()
-		for j:=0; j<len(previousFiles); j++ {
+		for j := 0; j < len(previousFiles); j++ {
 			if currFilename == previousFiles[j].Name() {
 				if currFiles[i].Size() != previousFiles[j].Size() {
-					err = this.dbUpdate(path, currFiles[i], tx)
+					err = s.dbUpdate(path, currFiles[i], tx)
 					if err != nil {
 						return err
 					}
@@ -687,38 +697,38 @@ func(this *SearchIndexer) updateFolder(path string, tx *sql.Tx) error {
 				break
 			}
 		}
-		if currFilenameAlreadyExist == false {
-			this.dbInsert(path, currFiles[i], tx)
+		if !currFilenameAlreadyExist {
+			s.dbInsert(path, currFiles[i], tx)
 		}
 	}
 	// 2. Find the content that was existing before but got removed
-	for i:=0; i<len(previousFiles); i++ {
+	for i := 0; i < len(previousFiles); i++ {
 		previousFilenameStillExist := false
 		previousFilename := previousFiles[i].Name()
-		for j:=0; j<len(currFiles); j++ {
+		for j := 0; j < len(currFiles); j++ {
 			if previousFilename == currFiles[j].Name() {
 				previousFilenameStillExist = true
 				break
 			}
 		}
-		if previousFilenameStillExist == false {
-			this.dbDelete(path, previousFiles[i], tx)
+		if !previousFilenameStillExist {
+			s.dbDelete(path, previousFiles[i], tx)
 		}
 	}
 	return nil
 }
 
-func(this *SearchIndexer) Consolidate(tx *sql.Tx) bool {
+func (s *SearchIndexer) Consolidate(tx *sql.Tx) bool {
 	rows, err := tx.Query(
 		"SELECT path, type FROM file WHERE indexTime < ? ORDER BY indexTime DESC LIMIT 5",
-		time.Now().Add(- time.Duration(SEARCH_REINDEX()) * time.Hour),
+		time.Now().Add(- time.Duration(SearchReindex())*time.Hour),
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			this.CurrentPhase = PHASE_PAUSE
+			s.CurrentPhase = PhasePause
 			return false
 		}
-		this.CurrentPhase = ""
+		s.CurrentPhase = ""
 		return false
 	}
 	defer rows.Close()
@@ -732,28 +742,28 @@ func(this *SearchIndexer) Consolidate(tx *sql.Tx) bool {
 			return false
 		}
 		if cType == "directory" {
-			this.updateFolder(path, tx)
+			s.updateFolder(path, tx)
 		} else {
-			this.updateFile(path, tx)
+			s.updateFile(path, tx)
 		}
 	}
 	if i == 0 {
-		this.CurrentPhase = PHASE_PAUSE
+		s.CurrentPhase = PhasePause
 		return false
 	}
 	return true
 }
 
-func(this *SearchIndexer) dbInsert(parent string, f os.FileInfo, tx *sql.Tx) error {
-	var name string = f.Name()
+func (s *SearchIndexer) dbInsert(parent string, f os.FileInfo, tx *sql.Tx) error {
+	var name = f.Name()
 	var err error
 	path := filepath.Join(parent, name)
 
 	if f.IsDir() {
 		_, err = tx.Exec(
-			"INSERT INTO file(path, parent, filename, type, size, modTime, indexTime) " +
-			"VALUES(?, ?, ?, ?, ?, ?, ?)",
-			path + "/",
+			"INSERT INTO file(path, parent, filename, type, size, modTime, indexTime) "+
+				"VALUES(?, ?, ?, ?, ?, ?, ?)",
+			path+"/",
 			parent,
 			name,
 			"directory",
@@ -763,8 +773,8 @@ func(this *SearchIndexer) dbInsert(parent string, f os.FileInfo, tx *sql.Tx) err
 		)
 	} else {
 		_, err = tx.Exec(
-			"INSERT INTO file(path, parent, filename, type, size, modTime, indexTime, filetype) " +
-			"VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+			"INSERT INTO file(path, parent, filename, type, size, modTime, indexTime, filetype) "+
+				"VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
 			path,
 			parent,
 			name,
@@ -778,7 +788,7 @@ func(this *SearchIndexer) dbInsert(parent string, f os.FileInfo, tx *sql.Tx) err
 	return err
 }
 
-func(this *SearchIndexer) dbUpdate(parent string, f os.FileInfo, tx *sql.Tx) error {
+func (s *SearchIndexer) dbUpdate(parent string, f os.FileInfo, tx *sql.Tx) error {
 	path := filepath.Join(parent, f.Name())
 	if f.IsDir() {
 		path += "/"
@@ -790,14 +800,14 @@ func(this *SearchIndexer) dbUpdate(parent string, f os.FileInfo, tx *sql.Tx) err
 	return err
 }
 
-func(this *SearchIndexer) dbDelete(parent string, f os.FileInfo, tx *sql.Tx) error {
+func (s *SearchIndexer) dbDelete(parent string, f os.FileInfo, tx *sql.Tx) error {
 	path := filepath.Join(parent, f.Name())
 	if f.IsDir() {
 		path += "/"
 	}
 	_, err := tx.Exec(
 		"DELETE FROM file WHERE path >= ? AND path < ?",
-		path, path + "~",
+		path, path+"~",
 	)
 	return err
 }
@@ -817,8 +827,9 @@ type Document struct {
 
 // https://golang.org/pkg/container/heap/
 type HeapDoc []*Document
-func(h HeapDoc) Len() int { return len(h) }
-func(h HeapDoc) Less(i, j int) bool {
+
+func (h HeapDoc) Len() int { return len(h) }
+func (h HeapDoc) Less(i, j int) bool {
 	if h[i].Priority != 0 || h[j].Priority != 0 {
 		return h[i].Priority < h[j].Priority
 	}
@@ -826,13 +837,13 @@ func(h HeapDoc) Less(i, j int) bool {
 	scoreB := len(strings.Split(h[j].Path, "/")) / len(strings.Split(h[j].InitialPath, "/"))
 	return scoreA < scoreB
 }
-func(h HeapDoc) Swap(i, j int) {
+func (h HeapDoc) Swap(i, j int) {
 	a := h[i]
 	h[i] = h[j]
 	h[j] = a
 }
 func (h *HeapDoc) Push(x interface{}) {
-	if h.Len() < MAX_HEAP_SIZE {
+	if h.Len() < MaxHeapSize {
 		*h = append(*h, x.(*Document))
 	}
 }

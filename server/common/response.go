@@ -38,10 +38,10 @@ func SendSuccessResult(res http.ResponseWriter, data interface{}) {
 func SendSuccessResultWithEtagAndGzip(res http.ResponseWriter, req *http.Request, data interface{}) {
 	dataToSend, _ := json.Marshal(APISuccessResult{"ok", data})
 	mode := "normal"
-	if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") == true {
+	if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
 		mode = "gzip"
 	}
-	hash := QuickHash(mode + string(dataToSend), 20)
+	hash := QuickHash(mode+string(dataToSend), 20)
 	if req.Header.Get("If-None-Match") == hash {
 		res.WriteHeader(http.StatusNotModified)
 		return
@@ -60,7 +60,6 @@ func SendSuccessResultWithEtagAndGzip(res http.ResponseWriter, req *http.Request
 	res.Write(dataToSend)
 }
 
-
 func SendSuccessResults(res http.ResponseWriter, data interface{}) {
 	encoder := json.NewEncoder(res)
 	encoder.SetEscapeHTML(false)
@@ -77,7 +76,7 @@ func SendErrorResult(res http.ResponseWriter, err error) {
 	encoder := json.NewEncoder(res)
 	encoder.SetEscapeHTML(false)
 	obj, ok := err.(interface{ Status() int })
-	if ok == true {
+	if ok {
 		res.WriteHeader(obj.Status())
 	} else {
 		res.WriteHeader(http.StatusInternalServerError)

@@ -10,21 +10,21 @@ import (
 	"os"
 	"regexp"
 	"sort"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type Mysql struct {
 	params map[string]string
-	db *sql.DB
+	db     *sql.DB
 }
 
 func init() {
 	Backend.Register("mysql", Mysql{})
 }
 
-func (this Mysql) Init(params map[string]string, app *App) (IBackend, error) {
+func (m Mysql) Init(params map[string]string, app *App) (IBackend, error) {
 	if params["host"] == "" {
 		params["host"] = "127.0.0.1"
 	}
@@ -47,34 +47,34 @@ func (this Mysql) Init(params map[string]string, app *App) (IBackend, error) {
 	}
 	return Mysql{
 		params: params,
-		db: db,
+		db:     db,
 	}, nil
 }
 
-func (this Mysql) LoginForm() Form {
+func (m Mysql) LoginForm() Form {
 	return Form{
 		Elmnts: []FormElement{
-			FormElement{
-				Name:        "type",
-				Type:        "hidden",
-				Value:       "mysql",
+			{
+				Name:  "type",
+				Type:  "hidden",
+				Value: "mysql",
 			},
-			FormElement{
+			{
 				Name:        "host",
 				Type:        "text",
 				Placeholder: "Host",
 			},
-			FormElement{
+			{
 				Name:        "username",
 				Type:        "text",
 				Placeholder: "Username",
 			},
-			FormElement{
+			{
 				Name:        "password",
 				Type:        "password",
 				Placeholder: "Password",
 			},
-			FormElement{
+			{
 				Name:        "port",
 				Type:        "number",
 				Placeholder: "Port",
@@ -83,8 +83,8 @@ func (this Mysql) LoginForm() Form {
 	}
 }
 
-func (this Mysql) Ls(path string) ([]os.FileInfo, error) {
-	defer this.db.Close()
+func (m Mysql) Ls(path string) ([]os.FileInfo, error) {
+	defer m.db.Close()
 	location, err := NewDBLocation(path)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (this Mysql) Ls(path string) ([]os.FileInfo, error) {
 	files := make([]os.FileInfo, 0)
 
 	if location.db == "" { // first level folder = a list all the available databases
-		rows, err := this.db.Query("SELECT s.schema_name, t.update_time, t.create_time FROM information_schema.SCHEMATA as s LEFT JOIN ( SELECT table_schema, MAX(update_time) as update_time, MAX(create_time) as create_time FROM information_schema.tables GROUP BY table_schema ) as t ON s.schema_name = t.table_schema ORDER BY schema_name")
+		rows, err := m.db.Query("SELECT s.schema_name, t.update_time, t.create_time FROM information_schema.SCHEMATA as s LEFT JOIN ( SELECT table_schema, MAX(update_time) as update_time, MAX(create_time) as create_time FROM information_schema.tables GROUP BY table_schema ) as t ON s.schema_name = t.table_schema ORDER BY schema_name")
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func (this Mysql) Ls(path string) ([]os.FileInfo, error) {
 		}
 		return files, nil
 	} else if location.table == "" { // second level folder = a list of all the tables available in a database
-		rows, err := this.db.Query("SELECT table_name, create_time, update_time FROM information_schema.tables WHERE table_schema = ?", location.db)
+		rows, err := m.db.Query("SELECT table_name, create_time, update_time FROM information_schema.tables WHERE table_schema = ?", location.db)
 		if err != nil {
 			return nil, err
 		}
@@ -172,7 +172,7 @@ func (this Mysql) Ls(path string) ([]os.FileInfo, error) {
 		}
 		return files, nil
 	} else if location.row == "" { // third level folder = a list of all the available rows within the selected table
-		sqlFields, err := FindQuerySelection(this.db, location)
+		sqlFields, err := FindQuerySelection(m.db, location)
 		if err != nil {
 			return nil, err
 		}
@@ -189,12 +189,12 @@ func (this Mysql) Ls(path string) ([]os.FileInfo, error) {
 		extractNamePlus := func(s []QuerySelection) []string {
 			t := make([]string, 0, len(s))
 			for i := range s {
-				t = append(t, "IFNULL(" + extractSingleName(s[i]) + ", '')")
+				t = append(t, "IFNULL("+extractSingleName(s[i])+", '')")
 			}
 			return t
 		}
 
-		rows, err := this.db.Query(fmt.Sprintf(
+		rows, err := m.db.Query(fmt.Sprintf(
 			"SELECT CONCAT(%s) as filename %sFROM %s.%s %s LIMIT 15000",
 			func() string {
 				q := strings.Join(extractNamePlus(sqlFields.Select), ", ' - ', ")
@@ -203,7 +203,7 @@ func (this Mysql) Ls(path string) ([]os.FileInfo, error) {
 				}
 				return q
 			}(),
-			func() string{
+			func() string {
 				if extractSingleName(sqlFields.Date) != "" {
 					return ", " + extractSingleName(sqlFields.Date) + " as date "
 				}
@@ -217,7 +217,7 @@ func (this Mysql) Ls(path string) ([]os.FileInfo, error) {
 				}
 				return ""
 			}(),
-		));
+		))
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +235,7 @@ func (this Mysql) Ls(path string) ([]os.FileInfo, error) {
 				}
 			}
 			files = append(files, File{
-				FName: string(name_raw)+".form",
+				FName: string(name_raw) + ".form",
 				FType: "file",
 				FSize: -1,
 				FTime: func() int64 {
@@ -252,8 +252,8 @@ func (this Mysql) Ls(path string) ([]os.FileInfo, error) {
 	return nil, ErrNotValid
 }
 
-func (this Mysql) Cat(path string) (io.ReadCloser, error) {
-	defer this.db.Close()
+func (m Mysql) Cat(path string) (io.ReadCloser, error) {
+	defer m.db.Close()
 	location, err := NewDBLocation(path)
 	if err != nil {
 		return nil, err
@@ -262,7 +262,7 @@ func (this Mysql) Cat(path string) (io.ReadCloser, error) {
 	}
 
 	// STEP 1: Perform the database query
-	fields, err := FindQuerySelection(this.db, location)
+	fields, err := FindQuerySelection(m.db, location)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +274,7 @@ func (this Mysql) Cat(path string) (io.ReadCloser, error) {
 		whereSQL,
 	)
 
-	rows, err := this.db.Query(query, whereParams...)
+	rows, err := m.db.Query(query, whereParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -285,13 +285,13 @@ func (this Mysql) Cat(path string) (io.ReadCloser, error) {
 
 	// STEP 2: find potential foreign key on given results
 	// those will be shown as a list of possible choice
-	columnsChoice, err := FindForeignKeysChoices(this.db, location)
+	columnsChoice, err := FindForeignKeysChoices(m.db, location)
 	if err != nil {
 		return nil, err
 	}
 
 	// STEP 3: Encode the result of the query into a form object
-	var forms []FormElement = []FormElement{}
+	var forms = []FormElement{}
 
 	dummy := make([]interface{}, len(columnsName))
 	columnPointers := make([]interface{}, len(columnsName))
@@ -348,9 +348,9 @@ func (this Mysql) Cat(path string) (io.ReadCloser, error) {
 			case "enum":
 				el.Type = "select"
 				reg := regexp.MustCompile(`^'(.*)'$`)
-				el.Opts = func () []string{
+				el.Opts = func() []string {
 					r := strings.Split(strings.TrimSuffix(strings.TrimPrefix(fields.All[columnsName[i]].RawType, "enum("), ")"), ",")
-					for i:=0; i<len(r); i++ {
+					for i := 0; i < len(r); i++ {
 						r[i] = reg.ReplaceAllString(r[i], `$1`)
 					}
 					return r
@@ -389,27 +389,27 @@ func (this Mysql) Cat(path string) (io.ReadCloser, error) {
 				el.MultiValue = false
 				el.Datalist = choices
 
-				if l, err := FindWhoOwns(this.db, DBLocation{ location.db, location.table, columnsName[i]}); err == nil {
+				if l, err := FindWhoOwns(m.db, DBLocation{location.db, location.table, columnsName[i]}); err == nil {
 					el.Description = fmt.Sprintf(
 						"Relates to object in %s",
-						generateLink(this.params["path"], l, el.Value),
+						generateLink(m.params["path"], l, el.Value),
 					)
 				}
 			} else if key := fields.All[columnsName[i]].Key; key == "PRI" {
-				locations, err := FindWhoIsUsing(this.db, location)
+				locations, err := FindWhoIsUsing(m.db, location)
 				if err != nil {
 					return nil, err
 				}
 
 				if len(locations) > 0 {
 					text := []string{}
-					for i:=0; i<len(locations); i++ {
+					for i := 0; i < len(locations); i++ {
 						text = append(
 							text,
 							fmt.Sprintf(
 								"%s (%d)",
-								generateLink(this.params["path"], DBLocation{ locations[i].db, locations[i].table, locations[i].row }, el.Value),
-								FindHowManyOccurenceOfaValue(this.db, locations[i], el.Value),
+								generateLink(m.params["path"], DBLocation{locations[i].db, locations[i].table, locations[i].row}, el.Value),
+								FindHowManyOccurenceOfaValue(m.db, locations[i], el.Value),
 							),
 						)
 					}
@@ -421,29 +421,29 @@ func (this Mysql) Cat(path string) (io.ReadCloser, error) {
 	}
 
 	// STEP 3: Send the form back to the user
-	b, err := Form{Elmnts: forms}.MarshalJSON();
+	b, err := Form{Elmnts: forms}.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
 	return NewReadCloserFromBytes(b), nil
 }
 
-func (this Mysql) Mkdir(path string) error {
-	defer this.db.Close()
+func (m Mysql) Mkdir(path string) error {
+	defer m.db.Close()
 	location, err := NewDBLocation(path)
 	if err != nil {
 		return err
 	}
 
 	if location.db != "" && location.table == "" && location.row == "" {
-		_, err = this.db.Exec(fmt.Sprintf("CREATE DATABASE %s", strings.TrimPrefix(location.db, "CREATE DATABASE ")))
+		_, err = m.db.Exec(fmt.Sprintf("CREATE DATABASE %s", strings.TrimPrefix(location.db, "CREATE DATABASE ")))
 		return err
 	}
 	return ErrNotAllowed
 }
 
-func (this Mysql) Rm(path string) error {
-	defer this.db.Close()
+func (m Mysql) Rm(path string) error {
+	defer m.db.Close()
 	location, err := NewDBLocation(path)
 	if err != nil {
 		return err
@@ -451,13 +451,13 @@ func (this Mysql) Rm(path string) error {
 	if location.db == "" {
 		return ErrNotValid
 	} else if location.table == "" {
-		_, err := this.db.Exec(fmt.Sprintf("DROP DATABASE %s", location.db))
+		_, err := m.db.Exec(fmt.Sprintf("DROP DATABASE %s", location.db))
 		return err
 	} else if location.row == "" {
-		_, err := this.db.Exec(fmt.Sprintf("DROP TABLE %s.%s", location.db, location.table))
+		_, err := m.db.Exec(fmt.Sprintf("DROP TABLE %s.%s", location.db, location.table))
 		return err
 	}
-	fields, err := FindQuerySelection(this.db, location)
+	fields, err := FindQuerySelection(m.db, location)
 	if err != nil {
 		return err
 	}
@@ -468,17 +468,17 @@ func (this Mysql) Rm(path string) error {
 		location.table,
 		whereSQL,
 	)
-	_, err = this.db.Exec(query, whereParams...)
+	_, err = m.db.Exec(query, whereParams...)
 	return err
 }
 
-func (this Mysql) Mv(from string, to string) error {
-	defer this.db.Close()
+func (m Mysql) Mv(from string, to string) error {
+	defer m.db.Close()
 	return ErrNotValid
 }
 
-func (this Mysql) Touch(path string) error {
-	defer this.db.Close()
+func (m Mysql) Touch(path string) error {
+	defer m.db.Close()
 	location, err := NewDBLocation(path)
 	if err != nil {
 		return err
@@ -491,7 +491,7 @@ func (this Mysql) Touch(path string) error {
 		return ErrNotValid
 	}
 
-	fields, err := FindQuerySelection(this.db, location)
+	fields, err := FindQuerySelection(m.db, location)
 	if err != nil {
 		return err
 	}
@@ -506,7 +506,7 @@ func (this Mysql) Touch(path string) error {
 			}
 			return strings.Join(values, ",")
 		}(),
-		func()string {
+		func() string {
 			values := make([]string, len(fields.Select))
 			for i := range values {
 				values[i] = "?"
@@ -532,7 +532,7 @@ func (this Mysql) Touch(path string) error {
 		}
 		return valuesOfQuery
 	}()
-	_ ,err = this.db.Exec(query, queryValues...)
+	_, err = m.db.Exec(query, queryValues...)
 	return err
 }
 
@@ -540,8 +540,9 @@ type SqlKeyParams struct {
 	Key   string
 	Value interface{}
 }
-func (this Mysql) Save(path string, file io.Reader) error {
-	defer this.db.Close()
+
+func (m Mysql) Save(path string, file io.Reader) error {
+	defer m.db.Close()
 	location, err := NewDBLocation(path)
 	if err != nil {
 		return err
@@ -549,7 +550,7 @@ func (this Mysql) Save(path string, file io.Reader) error {
 	if location.db == "" || location.table == "" || location.row == "" {
 		return ErrNotValid
 	}
-	sqlFields, err := FindQuerySelection(this.db, location)
+	sqlFields, err := FindQuerySelection(m.db, location)
 	if err != nil {
 		return err
 	}
@@ -557,7 +558,7 @@ func (this Mysql) Save(path string, file io.Reader) error {
 	if err := json.NewDecoder(file).Decode(&data); err != nil {
 		return err
 	}
-	var d []SqlKeyParams = make([]SqlKeyParams, 0)
+	var d = make([]SqlKeyParams, 0)
 	for key, value := range data {
 		d = append(d, SqlKeyParams{key, value.Value})
 	}
@@ -568,7 +569,7 @@ func (this Mysql) Save(path string, file io.Reader) error {
 		setParams = append(setParams, v.Value)
 	}
 
-	_, err = this.db.Exec(fmt.Sprintf(
+	_, err = m.db.Exec(fmt.Sprintf(
 		"UPDATE %s.%s SET %s WHERE %s",
 		location.db,
 		location.table,
@@ -587,7 +588,7 @@ func (this Mysql) Save(path string, file io.Reader) error {
 	return nil
 }
 
-func (this Mysql) Meta(path string) Metadata {
+func (m Mysql) Meta(path string) Metadata {
 	location, _ := NewDBLocation(path)
 	return Metadata{
 		CanCreateDirectory: func(l DBLocation) *bool {
@@ -629,26 +630,26 @@ func NewDBLocation(path string) (DBLocation, error) {
 		location = DBLocation{
 			db: p[0],
 		}
-		if isValid(p[0]) == false {
+		if !isValid(p[0]) {
 			return location, ErrNotValid
 		}
 		return location, nil
 	} else if lPath == 2 {
 		location = DBLocation{
-			db: p[0],
+			db:    p[0],
 			table: p[1],
 		}
-		if isValid(p[0]) == false || isValid(p[1]) == false {
+		if !isValid(p[0]) || !isValid(p[1]) {
 			return location, ErrNotValid
 		}
 		return location, nil
 	} else if lPath == 3 {
 		location = DBLocation{
-			db: p[0],
+			db:    p[0],
 			table: p[1],
-			row: strings.TrimSuffix(p[2], ".form"),
+			row:   strings.TrimSuffix(p[2], ".form"),
 		}
-		if isValid(p[0]) == false || isValid(p[1]) == false {
+		if !isValid(p[0]) || !isValid(p[1]) {
 			return location, ErrNotValid
 		}
 		return location, nil
@@ -689,12 +690,12 @@ func sqlWhereClause(s SqlFields, location DBLocation) (string, []interface{}) {
 }
 
 func FindQuerySelection(db *sql.DB, location DBLocation) (SqlFields, error) {
-	var queryCandidates []QuerySelection = make([]QuerySelection, 0)
-	var fields SqlFields = SqlFields{
-		Order: make([]QuerySelection, 0),
-		Select: make([]QuerySelection, 0),
+	var queryCandidates = make([]QuerySelection, 0)
+	var fields = SqlFields{
+		Order:     make([]QuerySelection, 0),
+		Select:    make([]QuerySelection, 0),
 		Esthetics: make([]QuerySelection, 0),
-		All: make(map[string]QuerySelection, 0),
+		All:       make(map[string]QuerySelection, 0),
 	}
 	if location.db == "" || location.table == "" {
 		return fields, ErrNotValid
@@ -736,7 +737,7 @@ func FindQuerySelection(db *sql.DB, location DBLocation) (SqlFields, error) {
 				return false
 			}(),
 			RawType: column_type,
-			Key: column_key,
+			Key:     column_key,
 		}
 		fields.All[column_name] = q
 		queryCandidates = append(queryCandidates, q)
@@ -746,7 +747,7 @@ func FindQuerySelection(db *sql.DB, location DBLocation) (SqlFields, error) {
 	}
 
 	// STEP 2: filter out unwanted fields from the schema
-	for i:=0; i<len(queryCandidates); i++ {
+	for i := 0; i < len(queryCandidates); i++ {
 		if queryCandidates[i].Key == "PRI" || queryCandidates[i].Key == "UNI" {
 			fields.Select = append(fields.Select, queryCandidates[i])
 			if queryCandidates[i].Type == "date" {
@@ -756,7 +757,7 @@ func FindQuerySelection(db *sql.DB, location DBLocation) (SqlFields, error) {
 			fields.Esthetics = append(fields.Esthetics, queryCandidates[i])
 		}
 
-		if queryCandidates[i].Type == "date" && queryCandidates[i].Nullable == false {
+		if queryCandidates[i].Type == "date" && !queryCandidates[i].Nullable {
 			fields.Date = queryCandidates[i]
 		}
 	}
@@ -779,8 +780,8 @@ func FindQuerySelection(db *sql.DB, location DBLocation) (SqlFields, error) {
 			}
 			return queryCandidates[i].Size < queryCandidates[j].Size
 		})
-		var size int = 0
-		var i    int = 0
+		var size = 0
+		var i = 0
 		for i = range queryCandidates {
 			query := fmt.Sprintf(
 				"SELECT COUNT(%s), COUNT(DISTINCT(%s)) FROM %s.%s",
@@ -790,14 +791,14 @@ func FindQuerySelection(db *sql.DB, location DBLocation) (SqlFields, error) {
 				location.table,
 			)
 			size += queryCandidates[i].Size
-			var count_all       int
+			var count_all int
 			var count_distinct int
 			if err := db.QueryRow(query).Scan(&count_all, &count_distinct); err != nil {
 				return fields, err
 			}
 			if count_all == count_distinct {
 				fields.Select = append(fields.Select, queryCandidates[i])
-				fields.Esthetics = func() []QuerySelection{
+				fields.Esthetics = func() []QuerySelection {
 					var i int
 					esthetics := make([]QuerySelection, 0, len(fields.Esthetics))
 					for i = range fields.Esthetics {
@@ -810,7 +811,7 @@ func FindQuerySelection(db *sql.DB, location DBLocation) (SqlFields, error) {
 				break
 			}
 		}
-		if i == len(queryCandidates) - 1 {
+		if i == len(queryCandidates)-1 {
 			if size > 200 {
 				return fields, NewError("This table doesn't have any defined keys.", 405)
 			}
@@ -852,20 +853,20 @@ func FindQuerySelection(db *sql.DB, location DBLocation) (SqlFields, error) {
 		}
 		return fields.Order[0].Name
 	}()
-	fields.Esthetics = func() []QuerySelection{ // fields whose only value is to make our generated field look good
-		var size int = 0
+	fields.Esthetics = func() []QuerySelection { // fields whose only value is to make our generated field look good
+		var size = 0
 		var i int
 		for i = range fields.Select {
 			size += fields.Select[i].Size
 		}
 		for i = range fields.Esthetics {
 			s := fields.Esthetics[i].Size
-			if size + s > 100 {
+			if size+s > 100 {
 				break
 			}
 			size += s
 		}
-		if i+1 > len(fields.Esthetics){
+		if i+1 > len(fields.Esthetics) {
 			return fields.Esthetics
 		}
 		return fields.Esthetics[:i+1]
@@ -874,8 +875,8 @@ func FindQuerySelection(db *sql.DB, location DBLocation) (SqlFields, error) {
 	return fields, nil
 }
 
-func (this Mysql) Close() error {
-	return this.db.Close()
+func (m Mysql) Close() error {
+	return m.db.Close()
 }
 
 func FindForeignKeysChoices(db *sql.DB, location DBLocation) (map[string][]string, error) {
@@ -895,7 +896,7 @@ func FindForeignKeysChoices(db *sql.DB, location DBLocation) (map[string][]strin
 		if err != nil {
 			return choices, err
 		}
-		var res []string = make([]string, 0)
+		var res = make([]string, 0)
 		for r.Next() {
 			var value string
 			r.Scan(&value)
@@ -920,9 +921,9 @@ func FindWhoIsUsing(db *sql.DB, location DBLocation) ([]DBLocation, error) {
 			return locations, err
 		}
 		locations = append(locations, DBLocation{
-			db: table_schema,
+			db:    table_schema,
 			table: table_name,
-			row: column_name,
+			row:   column_name,
 		})
 	}
 	return locations, nil
@@ -941,7 +942,7 @@ func FindWhoOwns(db *sql.DB, location DBLocation) (DBLocation, error) {
 	).Scan(&referenced_table_schema, &referenced_table_name, &referenced_column_name); err != nil {
 		return DBLocation{}, err
 	}
-	return DBLocation{ referenced_table_schema, referenced_table_name, referenced_column_name }, nil
+	return DBLocation{referenced_table_schema, referenced_table_name, referenced_column_name}, nil
 }
 
 func FindHowManyOccurenceOfaValue(db *sql.DB, location DBLocation, value interface{}) int {

@@ -9,8 +9,8 @@
 set -e
 arch=$(dpkg --print-architecture)
 if [ $arch != "amd64" ] && [ $arch != "armhf" ]; then
-    echo "PLATFORM NOT SUPPORTED"
-    exit 1
+  echo "PLATFORM NOT SUPPORTED"
+  exit 1
 fi
 
 ################################################
@@ -21,32 +21,32 @@ export PATH=~/.local/bin:$PATH
 
 ################################################
 # Stage 1: Get libvips and its dependencies + recompile for less headaches
-INITIAL_PATH=`pwd`
+INITIAL_PATH=$(pwd)
 mkdir -p /tmp/filestash/libresize/tmp
 cd /tmp/filestash/libresize
 apt install -y libvips-dev
 cd tmp
-curl -L -X GET https://github.com/libvips/libvips/releases/download/v8.7.0/vips-8.7.0.tar.gz > libvips.tar.gz
+curl -L -X GET https://github.com/libvips/libvips/releases/download/v8.7.0/vips-8.7.0.tar.gz >libvips.tar.gz
 tar -zxf libvips.tar.gz
 cd vips-8.7.0/
-./configure --enable-static --without-magick --without-lcms  --without-OpenEXR --without-nifti --without-pdfium --without-rsvg --without-matio --without-libwebp --without-cfitsio --without-zlib --without-poppler --without-pangoft2 --enable-introspection=no --without-openslide
+./configure --enable-static --without-magick --without-lcms --without-OpenEXR --without-nifti --without-pdfium --without-rsvg --without-matio --without-libwebp --without-cfitsio --without-zlib --without-poppler --without-pangoft2 --enable-introspection=no --without-openslide
 make -j 8
 make install
 cd $INITIAL_PATH
 
 ################################################
 # Stage 2: Create our own library as a static build
-gcc -Wall -c src/libresize.c `pkg-config --cflags glib-2.0`
+gcc -Wall -c src/libresize.c $(pkg-config --cflags glib-2.0)
 ar rcs libresize.a libresize.o
 
 ################################################
 # Stage 3: Gather and assemble all the bits and pieces together
 libpath=$(
-    if [ $arch = "amd64" ]; then
-        echo "x86_64-linux-gnu";
-    elif [ $arch = "armhf" ]; then
-        echo "arm-linux-gnueabihf"
-    fi
+  if [ $arch = "amd64" ]; then
+    echo "x86_64-linux-gnu"
+  elif [ $arch = "armhf" ]; then
+    echo "arm-linux-gnueabihf"
+  fi
 )
 #ar x /tmp/libresize.a
 ar x /usr/local/lib/libvips.a

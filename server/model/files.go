@@ -7,46 +7,42 @@ import (
 	"strings"
 )
 
-func NewBackend(ctx *App, conn map[string]string) (IBackend, error) {
-	isAllowed := func() bool {
-		// by default, a hacker could use filestash to establish connections outside of what's
-		// define in the config file. We need to prevent this
-		possibilities := make([]map[string]interface{}, 0)
-		for i:=0; i< len(Config.Conn); i++ {
-			d := Config.Conn[i]
-			if d["type"] != conn["type"] {
+func isAllowed(conn map[string]string) bool {
+	// by default, a hacker could use filestash to establish connections outside of what's
+	// define in the config file. We need to prevent this
+	possibilities := make([]map[string]interface{}, 0)
+	for _, d := range Config.Conn {
+		if d["type"] != conn["type"] {
+			continue
+		}
+		if val, ok := d["hostname"]; ok {
+			if val != conn["hostname"] {
 				continue
 			}
-			if val, ok := d["hostname"]; ok == true {
-				if val != conn["hostname"] {
-					continue
-				}
-			}
-			if val, ok := d["path"]; ok == true {
-				if val == nil {
-					val = "/"
-				}
-				if configPath, ok := val.(string); ok == false {
-					continue
-				} else if strings.HasPrefix(conn["path"], configPath) == false {
-					continue
-				}
-			}
-			if val, ok := d["url"]; ok == true {
-				if val != conn["url"] {
-					continue
-				}
-			}
-			possibilities = append(possibilities, Config.Conn[i])
 		}
-		if len(possibilities) > 0 {
-			return true
+		if val, ok := d["path"]; ok {
+			if val == nil {
+				val = "/"
+			}
+			if configPath, ok := val.(string); !ok {
+				continue
+			} else if !strings.HasPrefix(conn["path"], configPath) {
+				continue
+			}
 		}
-		return false
+		if val, ok := d["url"]; ok {
+			if val != conn["url"] {
+				continue
+			}
+		}
+		possibilities = append(possibilities, d)
 	}
+	return len(possibilities) > 0
+}
 
-	if isAllowed() == false {
-		return Backend.Get(BACKEND_NIL), ErrNotAllowed
+func NewBackend(ctx *App, conn map[string]string) (IBackend, error) {
+	if !isAllowed(conn) {
+		return Backend.Get(BackendNil), ErrNotAllowed
 	}
 	return Backend.Get(conn["type"]).Init(conn, ctx)
 }
@@ -71,12 +67,12 @@ func GetHome(b IBackend, base string) (string, error) {
 }
 
 func MapStringInterfaceToMapStringString(m map[string]interface{}) map[string]string {
-    res := make(map[string]string)
-    for key, value := range m {
-		res[key] = fmt.Sprintf("%v", value)
-		if res[key] == "<nil>" {
-			res[key] = ""
+	res := make(map[string]string)
+	for k, v := range m {
+		res[k] = fmt.Sprintf("%v", v)
+		if res[k] == "<nil>" {
+			res[k] = ""
 		}
-    }
+	}
 	return res
 }

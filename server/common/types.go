@@ -23,19 +23,15 @@ type File struct {
 	FName     string `json:"name"`
 	FType     string `json:"type"`
 	FTime     int64  `json:"time"`
-	FSize     int64  `json:"size"`	
+	FSize     int64  `json:"size"`
 	FPath     string `json:"path,omitempty"`
 	CanRename *bool  `json:"can_rename,omitempty"`
 	CanMove   *bool  `json:"can_move_directory,omitempty"`
 	CanDelete *bool  `json:"can_delete,omitempty"`
 }
 
-func (f File) Name() string {
-	return f.FName
-}
-func (f File) Size() int64 {
-	return f.FSize
-}
+func (f File) Name() string { return f.FName }
+func (f File) Size() int64  { return f.FSize }
 func (f File) Mode() os.FileMode {
 	if f.IsDir() {
 		return os.ModeDir
@@ -54,9 +50,7 @@ func (f File) IsDir() bool {
 	}
 	return true
 }
-func (f File) Sys() interface{} {
-	return nil
-}
+func (f File) Sys() interface{} { return nil }
 
 type Metadata struct {
 	CanSee             *bool      `json:"can_read,omitempty"`
@@ -72,22 +66,22 @@ type Metadata struct {
 	Expire             *time.Time `json:"-"`
 }
 
-const PASSWORD_DUMMY = "{{PASSWORD}}"
+const PasswordDummy = "{{PASSWORD}}"
 
 type Share struct {
-	Id           string   `json:"id"`
-	Backend      string   `json:"-"`
-	Auth         string   `json:"auth,omitempty"`
-	Path         string   `json:"path"`
-	Password     *string  `json:"password,omitempty"`
-	Users        *string  `json:"users,omitempty"`
-	Expire       *int64   `json:"expire,omitempty"`
-	Url          *string  `json:"url,omitempty"`
-	CanShare     bool     `json:"can_share"`
-	CanManageOwn bool     `json:"can_manage_own"`
-	CanRead      bool     `json:"can_read"`
-	CanWrite     bool     `json:"can_write"`
-	CanUpload    bool     `json:"can_upload"`
+	Id           string  `json:"id"`
+	Backend      string  `json:"-"`
+	Auth         string  `json:"auth,omitempty"`
+	Path         string  `json:"path"`
+	Password     *string `json:"password,omitempty"`
+	Users        *string `json:"users,omitempty"`
+	Expire       *int64  `json:"expire,omitempty"`
+	Url          *string `json:"url,omitempty"`
+	CanShare     bool    `json:"can_share"`
+	CanManageOwn bool    `json:"can_manage_own"`
+	CanRead      bool    `json:"can_read"`
+	CanWrite     bool    `json:"can_write"`
+	CanUpload    bool    `json:"can_upload"`
 }
 
 func (s Share) IsValid() error {
@@ -102,43 +96,51 @@ func (s Share) IsValid() error {
 
 func (s *Share) MarshalJSON() ([]byte, error) {
 	p := Share{
-		s.Id,
-		s.Backend,
-		"",
-		s.Path,
-		func(pass *string) *string{
+		Id:      s.Id,
+		Backend: s.Backend,
+		Path:    s.Path,
+		Password: func(pass *string) *string {
 			if pass != nil {
-				return NewString(PASSWORD_DUMMY)
+				return NewString(PasswordDummy)
 			}
 			return nil
 		}(s.Password),
-		s.Users,
-		s.Expire,
-		s.Url,
-		s.CanShare,
-		s.CanManageOwn,
-		s.CanRead,
-		s.CanWrite,
-		s.CanUpload,
+		Users:        s.Users,
+		Expire:       s.Expire,
+		Url:          s.Url,
+		CanShare:     s.CanShare,
+		CanManageOwn: s.CanManageOwn,
+		CanRead:      s.CanRead,
+		CanWrite:     s.CanWrite,
+		CanUpload:    s.CanUpload,
 	}
 	return json.Marshal(p)
 }
-func(s *Share) UnmarshallJSON(b []byte) error {
+func (s *Share) UnmarshallJSON(b []byte) error {
 	var tmp map[string]interface{}
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
 	for key, value := range tmp {
 		switch key {
-		case "password": s.Password = NewStringpFromInterface(value)
-		case "users": s.Users = NewStringpFromInterface(value)
-		case "expire": s.Expire = NewInt64pFromInterface(value)
-		case "url": s.Url = NewStringpFromInterface(value)
-		case "can_share": s.CanShare = NewBoolFromInterface(value)
-		case "can_manage_own": s.CanManageOwn = NewBoolFromInterface(value)
-		case "can_read": s.CanRead = NewBoolFromInterface(value)
-		case "can_write": s.CanWrite = NewBoolFromInterface(value)
-		case "can_upload": s.CanUpload = NewBoolFromInterface(value)
+		case "password":
+			s.Password = NewStringpFromInterface(value)
+		case "users":
+			s.Users = NewStringpFromInterface(value)
+		case "expire":
+			s.Expire = NewInt64pFromInterface(value)
+		case "url":
+			s.Url = NewStringpFromInterface(value)
+		case "can_share":
+			s.CanShare = NewBoolFromInterface(value)
+		case "can_manage_own":
+			s.CanManageOwn = NewBoolFromInterface(value)
+		case "can_read":
+			s.CanRead = NewBoolFromInterface(value)
+		case "can_write":
+			s.CanWrite = NewBoolFromInterface(value)
+		case "can_upload":
+			s.CanUpload = NewBoolFromInterface(value)
 		}
 	}
 	return nil

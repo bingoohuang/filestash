@@ -28,7 +28,44 @@ func init() {
 	})
 }
 
-func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
+var (
+	keyStartMatcher   = regexp.MustCompile(`^-----BEGIN [A-Z\ ]+-----`)
+	keyEndMatcher     = regexp.MustCompile(`-----END [A-Z\ ]+-----$`)
+	keyContentMatcher = regexp.MustCompile(`^[a-zA-Z0-9\+\/\=\n]+$`)
+)
+
+func isPrivateKey(pass string) bool {
+	p := strings.TrimSpace(pass)
+
+	// match private key beginning
+	if keyStartMatcher.FindStringIndex(p) == nil {
+		return false
+	}
+	p = keyStartMatcher.ReplaceAllString(p, "")
+	// match private key ending
+	if keyEndMatcher.FindStringIndex(p) == nil {
+		return false
+	}
+	p = keyEndMatcher.ReplaceAllString(p, "")
+	p = strings.Replace(p, " ", "", -1)
+	// match private key content
+	return keyContentMatcher.FindStringIndex(p) != nil
+}
+
+func restorePrivateKeyLineBreaks(pass string) string {
+	p := strings.TrimSpace(pass)
+
+	keyStartString := keyStartMatcher.FindString(p)
+	p = keyStartMatcher.ReplaceAllString(p, "")
+	keyEndString := keyEndMatcher.FindString(p)
+	p = keyEndMatcher.ReplaceAllString(p, "")
+	p = strings.Replace(p, " ", "", -1)
+	keyContentString := keyContentMatcher.FindString(p)
+
+	return keyStartString + "\n" + keyContentString + "\n" + keyEndString
+}
+
+func (b Sftp) Init(params map[string]string, app *App) (IBackend, error) {
 	p := struct {
 		hostname   string
 		port       string
@@ -36,11 +73,11 @@ func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
 		password   string
 		passphrase string
 	}{
-		params["hostname"],
-		params["port"],
-		params["username"],
-		params["password"],
-		params["passphrase"],
+		hostname:   params["hostname"],
+		port:       params["port"],
+		username:   params["username"],
+		password:   params["password"],
+		passphrase: params["passphrase"],
 	}
 	if p.port == "" {
 		p.port = "22"
@@ -54,44 +91,6 @@ func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
 
 	addr := p.hostname + ":" + p.port
 	var auth []ssh.AuthMethod
-
-	keyStartMatcher := regexp.MustCompile(`^-----BEGIN [A-Z\ ]+-----`)
-	keyEndMatcher := regexp.MustCompile(`-----END [A-Z\ ]+-----$`)
-	keyContentMatcher := regexp.MustCompile(`^[a-zA-Z0-9\+\/\=\n]+$`)
-
-	isPrivateKey := func(pass string) bool {
-		p := strings.TrimSpace(pass)
-
-		// match private key beginning
-		if keyStartMatcher.FindStringIndex(p) == nil {
-			return false
-		}
-		p = keyStartMatcher.ReplaceAllString(p, "")
-		// match private key ending
-		if keyEndMatcher.FindStringIndex(p) == nil {
-			return false
-		}
-		p = keyEndMatcher.ReplaceAllString(p, "")
-		p = strings.Replace(p, " ", "", -1)
-		// match private key content
-		if keyContentMatcher.FindStringIndex(p) == nil {
-			return false
-		}
-		return true
-	}
-
-	restorePrivateKeyLineBreaks := func(pass string) string {
-		p := strings.TrimSpace(pass)
-
-		keyStartString := keyStartMatcher.FindString(p)
-		p = keyStartMatcher.ReplaceAllString(p, "")
-		keyEndString := keyEndMatcher.FindString(p)
-		p = keyEndMatcher.ReplaceAllString(p, "")
-		p = strings.Replace(p, " ", "", -1)
-		keyContentString := keyContentMatcher.FindString(p)
-
-		return keyStartString + "\n" + keyContentString + "\n" + keyEndString
-	}
 
 	if isPrivateKey(p.password) {
 		privateKey := restorePrivateKeyLineBreaks(p.password)
@@ -110,13 +109,14 @@ func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
 	}
 
 	config := &ssh.ClientConfig{
-		User:            p.username,
-		Auth:            auth,
+		User: p.username,
+		Auth: auth,
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			if params["hostkey"] == "" {
+			hostkey := params["hostkey"]
+			if hostkey == "" {
 				return nil
 			}
-			hostKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(params["hostkey"]))
+			hostKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(hostkey))
 			if err != nil {
 				return err
 			}
@@ -126,68 +126,67 @@ func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
 
 	client, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
-		return &s, ErrAuthenticationFailed
+		return &b, ErrAuthenticationFailed
 	}
-	s.SSHClient = client
+	b.SSHClient = client
 
-	session, err := sftp.NewClient(s.SSHClient)
+	session, err := sftp.NewClient(b.SSHClient)
 	if err != nil {
-		return &s, err
+		return &b, err
 	}
-	s.SFTPClient = session
-	SftpCache.Set(params, &s)
-	return &s, nil
+	b.SFTPClient = session
+	SftpCache.Set(params, &b)
+	return &b, nil
 }
 
 func (b Sftp) LoginForm() Form {
 	return Form{
 		Elmnts: []FormElement{
-			FormElement{
-				Name:        "type",
-				Type:        "hidden",
-				Value:       "sftp",
+			{
+				Name:  "type",
+				Type:  "hidden",
+				Value: "sftp",
 			},
-			FormElement{
+			{
 				Name:        "hostname",
 				Type:        "text",
 				Placeholder: "Hostname*",
 			},
-			FormElement{
+			{
 				Name:        "username",
 				Type:        "text",
 				Placeholder: "Username",
 			},
-			FormElement{
+			{
 				Name:        "password",
 				Type:        "password",
 				Placeholder: "Password",
 			},
-			FormElement{
+			{
 				Name:        "advanced",
 				Type:        "enable",
 				Placeholder: "Advanced",
 				Target:      []string{"sftp_path", "sftp_port", "sftp_passphrase", "sftp_hostkey"},
 			},
-			FormElement{
+			{
 				Id:          "sftp_path",
 				Name:        "path",
 				Type:        "text",
 				Placeholder: "Path",
 			},
-			FormElement{
+			{
 				Id:          "sftp_port",
 				Name:        "port",
 				Type:        "number",
 				Placeholder: "Port",
-
 			},
-			FormElement{
+			{
 				Id:          "sftp_passphrase",
 				Name:        "passphrase",
 				Type:        "password",
 				Placeholder: "Passphrase",
 			},
-			FormElement{
+			{
 				Id:          "sftp_hostkey",
 				Name:        "hostkey",
 				Type:        "text",
@@ -300,7 +299,7 @@ func (b Sftp) Close() error {
 
 func (b Sftp) err(e error) error {
 	f, ok := e.(*sftp.StatusError)
-	if ok == false {
+	if !ok {
 		if e == os.ErrNotExist {
 			return ErrNotFound
 		}

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const BACKEND_NIL = "_nothing_"
+const BackendNil = "_nothing_"
 
 var Backend = NewDriver()
 
@@ -30,7 +30,7 @@ func (d *Driver) Register(name string, driver IBackend) {
 
 func (d *Driver) Get(name string) IBackend {
 	b := d.ds[name]
-	if b == nil || name == BACKEND_NIL {
+	if b == nil || name == BackendNil {
 		return Nothing{}
 	}
 	return b
@@ -40,7 +40,8 @@ func (d *Driver) Drivers() map[string]IBackend {
 	return d.ds
 }
 
-type Nothing struct {}
+type Nothing struct{}
+
 func (b Nothing) Init(params map[string]string, app *App) (IBackend, error) {
 	return &Nothing{}, nil
 }

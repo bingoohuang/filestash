@@ -12,8 +12,8 @@ import (
 	"fmt"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"github.com/mickael-kerjean/net/webdav"
-	"net/http"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +21,7 @@ import (
 )
 
 const DAVCachePath = "data/cache/webdav/"
+
 var (
 	cachePath   string
 	webdavCache AppCache
@@ -55,18 +56,18 @@ func NewWebdavFs(b IBackend, primaryKey string, chroot string, req *http.Request
 	}
 }
 
-func (this WebdavFs) Mkdir(ctx context.Context, name string, perm os.FileMode) error {
-	if name = this.fullpath(name); name == "" {
+func (f WebdavFs) Mkdir(ctx context.Context, name string, perm os.FileMode) error {
+	if name = f.fullpath(name); name == "" {
 		return os.ErrNotExist
 	}
-	return this.backend.Mkdir(name)
+	return f.backend.Mkdir(name)
 }
 
-func (this *WebdavFs) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
-	cachePath := fmt.Sprintf("%stmp_%s", cachePath, Hash(this.id + name, 20))
+func (f *WebdavFs) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
+	cachePath := fmt.Sprintf("%stmp_%s", cachePath, Hash(f.id+name, 20))
 	fwriteFile := func() *os.File {
-		if this.req.Method == "PUT" {
-			f, err := os.OpenFile(cachePath+"_writer", os.O_WRONLY|os.O_CREATE|os.O_EXCL, os.ModePerm);
+		if f.req.Method == "PUT" {
+			f, err := os.OpenFile(cachePath+"_writer", os.O_WRONLY|os.O_CREATE|os.O_EXCL, os.ModePerm)
 			if err != nil {
 				return nil
 			}
@@ -74,70 +75,67 @@ func (this *WebdavFs) OpenFile(ctx context.Context, name string, flag int, perm 
 		}
 		return nil
 	}
-	if this.webdavFile != nil {
-		this.webdavFile.fwrite = fwriteFile()
-		return this.webdavFile, nil
+	if f.webdavFile != nil {
+		f.webdavFile.fwrite = fwriteFile()
+		return f.webdavFile, nil
 	}
-	if name = this.fullpath(name); name == "" {
+	if name = f.fullpath(name); name == "" {
 		return nil, os.ErrNotExist
 	}
-	this.webdavFile = &WebdavFile{
-		path: name,
-		backend: this.backend,
-		cache: cachePath,
-		fwrite: fwriteFile(),
+	f.webdavFile = &WebdavFile{
+		path:    name,
+		backend: f.backend,
+		cache:   cachePath,
+		fwrite:  fwriteFile(),
 	}
-	return this.webdavFile, nil
+	return f.webdavFile, nil
 }
 
-func (this WebdavFs) RemoveAll(ctx context.Context, name string) error {
-	if name = this.fullpath(name); name == "" {
+func (f WebdavFs) RemoveAll(ctx context.Context, name string) error {
+	if name = f.fullpath(name); name == "" {
 		return os.ErrNotExist
 	}
-	return this.backend.Rm(name)
+	return f.backend.Rm(name)
 }
 
-func (this WebdavFs) Rename(ctx context.Context, oldName, newName string) error {
-	if oldName = this.fullpath(oldName); oldName == "" {
+func (f WebdavFs) Rename(ctx context.Context, oldName, newName string) error {
+	if oldName = f.fullpath(oldName); oldName == "" {
 		return os.ErrNotExist
-	} else if newName = this.fullpath(newName); newName == "" {
+	} else if newName = f.fullpath(newName); newName == "" {
 		return os.ErrNotExist
 	}
-	return this.backend.Mv(oldName, newName)
+	return f.backend.Mv(oldName, newName)
 }
 
-func (this *WebdavFs) Stat(ctx context.Context, name string) (os.FileInfo, error) {
-	if this.webdavFile != nil {
-		this.webdavFile.push_to_remote_if_needed()
-		return this.webdavFile.Stat()
+func (f *WebdavFs) Stat(ctx context.Context, name string) (os.FileInfo, error) {
+	if f.webdavFile != nil {
+		f.webdavFile.pushToRemoteIfNeeded()
+		return f.webdavFile.Stat()
 	}
-	fullname := this.fullpath(name)
+	fullname := f.fullpath(name)
 	if fullname == "" {
 		return nil, os.ErrNotExist
 	}
-	this.webdavFile = &WebdavFile{
-		path: fullname,
-		backend: this.backend,
-		cache: fmt.Sprintf("%stmp_%s", cachePath, Hash(this.id + name, 20)),
+	f.webdavFile = &WebdavFile{
+		path:    fullname,
+		backend: f.backend,
+		cache:   fmt.Sprintf("%stmp_%s", cachePath, Hash(f.id+name, 20)),
 	}
-	return this.webdavFile.Stat()
+	return f.webdavFile.Stat()
 }
 
-func (this WebdavFs) fullpath(path string) string {
-	p := filepath.Join(this.chroot, path)
-	if strings.HasSuffix(path, "/") == true && strings.HasSuffix(p, "/") == false {
+func (f WebdavFs) fullpath(path string) string {
+	p := filepath.Join(f.chroot, path)
+	if strings.HasSuffix(path, "/") && !strings.HasSuffix(p, "/") {
 		p += "/"
 	}
-	if strings.HasPrefix(p, this.chroot) == false {
+	if !strings.HasPrefix(p, f.chroot) {
 		return ""
 	}
 	return p
 }
 
-
-/*
- * Implement a webdav.File and os.Stat : https://godoc.org/golang.org/x/net/webdav#File
- */
+// WebdavFile Implement a webdav.File and os.Stat : https://godoc.org/golang.org/x/net/webdav#File
 type WebdavFile struct {
 	path    string
 	backend IBackend
@@ -147,71 +145,71 @@ type WebdavFile struct {
 	files   []os.FileInfo
 }
 
-func (this *WebdavFile) Read(p []byte) (n int, err error) {
-	if strings.HasPrefix(filepath.Base(this.path), ".") {
+func (f *WebdavFile) Read(p []byte) (n int, err error) {
+	if strings.HasPrefix(filepath.Base(f.path), ".") {
 		return 0, os.ErrNotExist
 	}
-	if this.fread == nil {
-		if this.fread = this.pull_remote_file(); this.fread == nil {
+	if f.fread == nil {
+		if f.fread = f.pullRemoteFile(); f.fread == nil {
 			return -1, os.ErrInvalid
 		}
 	}
-	return this.fread.Read(p)
+	return f.fread.Read(p)
 }
 
-func (this *WebdavFile) Close() error {
-	if this.fread != nil {
-		if this.fread.Close() == nil {
-			this.fread = nil
+func (f *WebdavFile) Close() error {
+	if f.fread != nil {
+		if f.fread.Close() == nil {
+			f.fread = nil
 		}
 	}
-	if this.fwrite != nil {
-		if err := this.push_to_remote_if_needed(); err == nil {
-			if this.fwrite.Close() == nil {
-				this.fwrite = nil
+	if f.fwrite != nil {
+		if err := f.pushToRemoteIfNeeded(); err == nil {
+			if f.fwrite.Close() == nil {
+				f.fwrite = nil
 			}
 		}
 	}
 	return nil
 }
 
-func (this *WebdavFile) Seek(offset int64, whence int) (int64, error) {
-	if this.fread == nil {
-		this.fread = this.pull_remote_file();
-		if this.fread == nil {
+func (f *WebdavFile) Seek(offset int64, whence int) (int64, error) {
+	if f.fread == nil {
+		f.fread = f.pullRemoteFile()
+		if f.fread == nil {
 			return offset, ErrNotFound
 		}
 	}
-	a, err := this.fread.Seek(offset, whence)
+	a, err := f.fread.Seek(offset, whence)
 	if err != nil {
 		return a, ErrNotFound
 	}
 	return a, nil
 }
 
-func (this *WebdavFile) Readdir(count int) ([]os.FileInfo, error) {
-	if this.files != nil {
-		return this.files, nil
+func (f *WebdavFile) Readdir(count int) ([]os.FileInfo, error) {
+	if f.files != nil {
+		return f.files, nil
 	}
-	if strings.HasPrefix(filepath.Base(this.path), ".") {
+	if strings.HasPrefix(filepath.Base(f.path), ".") {
 		return nil, os.ErrNotExist
 	}
-	f, err := this.backend.Ls(this.path)
-	this.files = f
-	return f, err
+	ls, err := f.backend.Ls(f.path)
+	f.files = ls
+	return ls, err
 }
 
-func (this *WebdavFile) Stat() (os.FileInfo, error) {
-	this.push_to_remote_if_needed()
-	if strings.HasSuffix(this.path, "/") {
-		_, err := this.Readdir(0)
+func (f *WebdavFile) Stat() (os.FileInfo, error) {
+	f.pushToRemoteIfNeeded()
+	if strings.HasSuffix(f.path, "/") {
+		_, err := f.Readdir(0)
 		if err != nil {
 			return nil, os.ErrNotExist
 		}
-		return this, nil
+		return f, nil
 	}
-	baseDir := filepath.Base(this.path)
-	files, err := this.backend.Ls(strings.TrimSuffix(this.path, baseDir))
+	baseDir := filepath.Base(f.path)
+	files, err := f.backend.Ls(strings.TrimSuffix(f.path, baseDir))
 	if err != nil {
 		return nil, os.ErrNotExist
 	}
@@ -222,35 +220,35 @@ func (this *WebdavFile) Stat() (os.FileInfo, error) {
 			break
 		}
 	}
-	if found == false {
+	if !found {
 		return nil, os.ErrNotExist
 	}
-	return this, nil
+	return f, nil
 }
 
-func (this *WebdavFile) Write(p []byte) (int, error) {
-	if this.fwrite == nil {
+func (f *WebdavFile) Write(p []byte) (int, error) {
+	if f.fwrite == nil {
 		return 0, os.ErrNotExist
 	}
-	if strings.HasPrefix(filepath.Base(this.path), ".") {
+	if strings.HasPrefix(filepath.Base(f.path), ".") {
 		return 0, os.ErrNotExist
 	}
-	return this.fwrite.Write(p)
+	return f.fwrite.Write(p)
 }
 
-func (this WebdavFile) pull_remote_file() *os.File {
-	filename := this.cache+"_reader"
+func (f WebdavFile) pullRemoteFile() *os.File {
+	filename := f.cache + "_reader"
 	if f, err := os.OpenFile(filename, os.O_RDONLY, os.ModePerm); err == nil {
 		return f
 	}
-	if f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, os.ModePerm); err == nil {
-		if reader, err := this.backend.Cat(this.path); err == nil {
-			io.Copy(f, reader)
+	if fi, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, os.ModePerm); err == nil {
+		if reader, err := f.backend.Cat(f.path); err == nil {
+			io.Copy(fi, reader)
 			f.Close()
-			webdavCache.SetKey(this.cache + "_reader", nil)
+			webdavCache.SetKey(f.cache+"_reader", nil)
 			reader.Close()
-			if f, err = os.OpenFile(filename, os.O_RDONLY, os.ModePerm); err == nil {
-				return f
+			if fi, err = os.OpenFile(filename, os.O_RDONLY, os.ModePerm); err == nil {
+				return fi
 			}
 			return nil
 		}
@@ -259,76 +257,77 @@ func (this WebdavFile) pull_remote_file() *os.File {
 	return nil
 }
 
-func (this *WebdavFile) push_to_remote_if_needed() error {
-	if this.fwrite == nil {
+func (f *WebdavFile) pushToRemoteIfNeeded() error {
+	if f.fwrite == nil {
 		return nil
 	}
-	this.fwrite.Close()
-	f, err := os.OpenFile(this.cache + "_writer", os.O_RDONLY, os.ModePerm);
+	f.fwrite.Close()
+	fi, err := os.OpenFile(f.cache+"_writer", os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return err
 	}
-	err = this.backend.Save(this.path, f)
+	err = f.backend.Save(f.path, fi)
 	if err == nil {
-		if err = os.Rename(this.cache + "_writer", this.cache + "_reader"); err == nil {
-			this.fwrite = nil
-			webdavCache.SetKey(this.cache + "_reader", nil)
+		if err = os.Rename(f.cache+"_writer", f.cache+"_reader"); err == nil {
+			f.fwrite = nil
+			webdavCache.SetKey(f.cache+"_reader", nil)
 		}
 	}
 	f.Close()
 	return err
 }
 
-func (this WebdavFile) Name() string {
-	return filepath.Base(this.path)
+func (f WebdavFile) Name() string {
+	return filepath.Base(f.path)
 }
 
-func (this *WebdavFile) Size() int64 {
-	if this.fread == nil {
-		if this.fread = this.pull_remote_file(); this.fread == nil {
+func (f *WebdavFile) Size() int64 {
+	if f.fread == nil {
+		if f.fread = f.pullRemoteFile(); f.fread == nil {
 			return 0
 		}
 	}
-	if info, err := this.fread.Stat(); err == nil {
+	if info, err := f.fread.Stat(); err == nil {
 		return info.Size()
 	}
 	return 0
 }
 
-func (this WebdavFile) Mode() os.FileMode {
+func (f WebdavFile) Mode() os.FileMode {
 	return 0
 }
 
-func (this WebdavFile) ModTime() time.Time {
+func (f WebdavFile) ModTime() time.Time {
 	return time.Now()
 }
-func (this WebdavFile) IsDir() bool {
-	if strings.HasSuffix(this.path, "/") {
+func (f WebdavFile) IsDir() bool {
+	if strings.HasSuffix(f.path, "/") {
 		return true
 	}
 	return false
 }
 
-func (this WebdavFile) Sys() interface{} {
+func (f WebdavFile) Sys() interface{} {
 	return nil
 }
 
-func (this WebdavFile) ETag(ctx context.Context) (string, error) {
+func (f WebdavFile) ETag(ctx context.Context) (string, error) {
 	// Building an etag can be an expensive call if the data isn't available locally.
 	// => 2 etags strategies:
 	// - use a legit etag value when the data is already in our cache
 	// - use a dummy value that's changing all the time when we don't have much info
 
-	etag := Hash(fmt.Sprintf("%d%s", this.ModTime().UnixNano(), this.path), 20)
-	if this.fread != nil {
-		if s, err := this.fread.Stat(); err == nil {
-			etag = Hash(fmt.Sprintf(`"%x%x"`, this.path, s.Size()), 20)
+	etag := Hash(fmt.Sprintf("%d%s", f.ModTime().UnixNano(), f.path), 20)
+	if f.fread != nil {
+		if s, err := f.fread.Stat(); err == nil {
+			etag = Hash(fmt.Sprintf(`"%x%x"`, f.path, s.Size()), 20)
 		}
 	}
 	return etag, nil
 }
 
 var lock webdav.LockSystem
+
 func NewWebdavLock() webdav.LockSystem {
 	if lock == nil {
 		lock = webdav.NewMemLS()

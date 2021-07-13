@@ -96,7 +96,7 @@ func (git Git) Init(params map[string]string, app *App) (IBackend, error) {
 		return nil, NewError("Your password doesn't fit in a cookie :/", 500)
 	}
 
-	hash := GenerateID(app)	
+	hash := GenerateID(app)
 	p.basePath = GetAbsolutePath(GitCachePath + "repo_" + hash + "/")
 
 	repo, err := g.git.open(p, p.basePath)
@@ -111,80 +111,79 @@ func (git Git) Init(params map[string]string, app *App) (IBackend, error) {
 func (g Git) LoginForm() Form {
 	return Form{
 		Elmnts: []FormElement{
-			FormElement{
-				Name:        "type",
-				Value:       "git",
-				Type:        "hidden",
+			{
+				Name:  "type",
+				Value: "git",
+				Type:  "hidden",
 			},
-			FormElement{
+			{
 				Name:        "repo",
 				Type:        "text",
 				Placeholder: "Repository*",
 			},
-			FormElement{
+			{
 				Name:        "username",
 				Type:        "text",
 				Placeholder: "Username",
 			},
-			FormElement{
+			{
 				Name:        "password",
 				Type:        "long_password",
 				Placeholder: "Password",
 			},
-			FormElement{
+			{
 				Name:        "advanced",
 				Type:        "enable",
 				Placeholder: "Advanced",
-				Target:      []string{
+				Target: []string{
 					"git_path", "git_passphrase", "git_commit",
 					"git_branch", "git_author_email", "git_author_name",
 					"git_committer_email", "git_committer_name",
 				},
 			},
-			FormElement{
+			{
 				Id:          "git_path",
 				Name:        "path",
 				Type:        "text",
 				Placeholder: "Path",
 			},
-			FormElement{
+			{
 				Id:          "git_passphrase",
 				Name:        "passphrase",
 				Type:        "text",
 				Placeholder: "Passphrase",
-
 			},
-			FormElement{
+			{
 				Id:          "git_commit",
 				Name:        "commit",
 				Type:        "text",
 				Placeholder: "Commit Format: default to \"{action}({filename}): {path}\"",
 			},
-			FormElement{
+			{
 				Id:          "git_branch",
 				Name:        "branch",
 				Type:        "text",
 				Placeholder: "Branch: default to \"master\"",
 			},
-			FormElement{
+			{
 				Id:          "git_author_email",
 				Name:        "author_email",
 				Type:        "text",
 				Placeholder: "Author email",
 			},
-			FormElement{
+			{
 				Id:          "git_author_name",
 				Name:        "author_name",
 				Type:        "text",
 				Placeholder: "Author name",
 			},
-			FormElement{
+			{
 				Id:          "git_committer_email",
 				Name:        "committer_email",
 				Type:        "text",
 				Placeholder: "Committer email",
 			},
-			FormElement{
+			{
 				Id:          "git_committer_name",
 				Name:        "committer_name",
 				Type:        "text",
@@ -193,7 +192,6 @@ func (g Git) LoginForm() Form {
 		},
 	}
 }
-
 
 func (g Git) Ls(path string) ([]os.FileInfo, error) {
 	g.git.refresh()
@@ -309,7 +307,7 @@ func (g Git) path(path string) (string, error) {
 	if string(path[len(path)-1]) == "/" {
 		basePath += "/"
 	}
-	if strings.HasPrefix(basePath, g.git.params.basePath) == false {
+	if !strings.HasPrefix(basePath, g.git.params.basePath) {
 		return "", NewError("There's nothing here", 403)
 	}
 	return basePath, nil

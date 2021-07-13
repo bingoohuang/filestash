@@ -18,14 +18,12 @@ func NewString(t string) *string {
 	return &t
 }
 
-func NewInt(t int) *int {
-	return &t
-}
-
 func NewBoolFromInterface(val interface{}) bool {
 	switch val.(type) {
-	case bool: return val.(bool)
-	default: return false
+	case bool:
+		return val.(bool)
+	default:
+		return false
 	}
 }
 
@@ -37,7 +35,8 @@ func NewInt64pFromInterface(val interface{}) *int64 {
 	case float64:
 		v := int64(val.(float64))
 		return &v
-	default: return nil
+	default:
+		return nil
 	}
 }
 
@@ -46,7 +45,8 @@ func NewStringpFromInterface(val interface{}) *string {
 	case string:
 		v := val.(string)
 		return &v
-	default: return nil
+	default:
+		return nil
 	}
 }
 
@@ -55,7 +55,8 @@ func NewStringFromInterface(val interface{}) string {
 	case string:
 		v := val.(string)
 		return v
-	default: return ""
+	default:
+		return ""
 	}
 }
 

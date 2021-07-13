@@ -19,12 +19,12 @@ import (
 )
 
 const (
-	HLS_SEGMENT_LENGTH = 10
-	CLEAR_CACHE_AFTER = 12
-	VideoCachePath = "data/cache/video/"
+	HlsSegmentLength = 10
+	ClearCacheAfter  = 12
+	VideoCachePath   = "data/cache/video/"
 )
 
-func init(){
+func init() {
 	ffmpegIsInstalled := false
 	ffprobeIsInstalled := false
 	if _, err := exec.LookPath("ffmpeg"); err == nil {
@@ -43,7 +43,7 @@ func init(){
 			f.Target = []string{"transcoding_blacklist_format"}
 			f.Description = "Enable/Disable on demand video transcoding. The transcoder"
 			f.Default = true
-			if ffmpegIsInstalled == false || ffprobeIsInstalled == false {
+			if !ffmpegIsInstalled || !ffprobeIsInstalled {
 				f.Default = false
 			}
 			return f
@@ -68,12 +68,12 @@ func init(){
 	}
 	blacklist_format()
 
-	if plugin_enable() == false {
+	if !plugin_enable() {
 		return
-	} else if ffmpegIsInstalled == false {
+	} else if !ffmpegIsInstalled {
 		Log.Warning("[plugin video transcoder] ffmpeg needs to be installed")
 		return
-	} else if ffprobeIsInstalled == false {
+	} else if !ffprobeIsInstalled {
 		Log.Warning("[plugin video transcoder] ffprobe needs to be installed")
 		return
 	}
@@ -82,13 +82,9 @@ func init(){
 	os.RemoveAll(cachePath)
 	os.MkdirAll(cachePath, os.ModePerm)
 
-	Hooks.Register.ProcessFileContentBeforeSend(hls_playlist)
+	Hooks.Register.ProcessFileContentBeforeSend(hlsPlaylist)
 	Hooks.Register.HttpEndpoint(func(r *mux.Router, app *App) error {
-		r.PathPrefix("/hls/hls_{segment}.ts").Handler(NewMiddlewareChain(
-			hls_transcode,
-			[]Middleware{ SecureHeaders },
-			*app,
-		)).Methods("GET")
+		r.PathPrefix("/hls/hls_{segment}.ts").Handler(Chain(hls_transcode, *app, SecureHeaders)).Methods("GET")
 		return nil
 	})
 
@@ -99,9 +95,9 @@ func init(){
 			res.Write([]byte(`    return sources.map(function(source){`))
 
 			blacklists := strings.Split(blacklist_format(), ",")
-			for i:=0; i<len(blacklists); i++ {
+			for i := 0; i < len(blacklists); i++ {
 				blacklists[i] = strings.TrimSpace(blacklists[i])
-				res.Write([]byte(fmt.Sprintf(`if(source.type == "%s"){ return source; } `, GetMimeType("." + blacklists[i]))))
+				res.Write([]byte(fmt.Sprintf(`if(source.type == "%s"){ return source; } `, GetMimeType("."+blacklists[i]))))
 			}
 			res.Write([]byte(`        source.src = source.src + "&transcode=hls";`))
 			res.Write([]byte(`        source.type = "application/x-mpegURL";`))
@@ -113,13 +109,13 @@ func init(){
 	})
 }
 
-func hls_playlist(reader io.ReadCloser, ctx *App, res *http.ResponseWriter, req *http.Request) (io.ReadCloser, error) {
+func hlsPlaylist(reader io.ReadCloser, ctx *App, res *http.ResponseWriter, req *http.Request) (io.ReadCloser, error) {
 	query := req.URL.Query()
 	if query.Get("transcode") != "hls" {
 		return reader, nil
 	}
 	path := query.Get("path")
-	if strings.HasPrefix(GetMimeType(path), "video/") == false {
+	if !strings.HasPrefix(GetMimeType(path), "video/") {
 		return reader, nil
 	}
 
@@ -129,7 +125,7 @@ func hls_playlist(reader io.ReadCloser, ctx *App, res *http.ResponseWriter, req 
 		VideoCachePath,
 		cacheName,
 	)
-	f, err := os.OpenFile(cachePath, os.O_CREATE | os.O_RDWR, os.ModePerm)
+	f, err := os.OpenFile(cachePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
 		Log.Stdout("ERR %+v", err)
 		return reader, err
@@ -137,7 +133,7 @@ func hls_playlist(reader io.ReadCloser, ctx *App, res *http.ResponseWriter, req 
 	io.Copy(f, reader)
 	reader.Close()
 	f.Close()
-	time.AfterFunc(CLEAR_CACHE_AFTER * time.Hour, func() { os.Remove(cachePath) })
+	time.AfterFunc(ClearCacheAfter*time.Hour, func() { os.Remove(cachePath) })
 
 	p, err := ffprobe(cachePath)
 	if err != nil {
@@ -146,16 +142,16 @@ func hls_playlist(reader io.ReadCloser, ctx *App, res *http.ResponseWriter, req 
 
 	var response string
 	var i int
-	response =  "#EXTM3U\n"
+	response = "#EXTM3U\n"
 	response += "#EXT-X-VERSION:3\n"
 	response += "#EXT-X-MEDIA-SEQUENCE:0\n"
 	response += "#EXT-X-ALLOW-CACHE:YES\n"
-	response += fmt.Sprintf("#EXT-X-TARGETDURATION:%d\n", HLS_SEGMENT_LENGTH)
-	for i=0; i< int(p.Format.Duration) / HLS_SEGMENT_LENGTH; i++ {
-		response += fmt.Sprintf("#EXTINF:%d.0000, nodesc\n", HLS_SEGMENT_LENGTH)
+	response += fmt.Sprintf("#EXT-X-TARGETDURATION:%d\n", HlsSegmentLength)
+	for i = 0; i < int(p.Format.Duration)/HlsSegmentLength; i++ {
+		response += fmt.Sprintf("#EXTINF:%d.0000, nodesc\n", HlsSegmentLength)
 		response += fmt.Sprintf("/hls/hls_%d.ts?path=%s\n", i, cacheName)
 	}
-	if md := math.Mod(p.Format.Duration, HLS_SEGMENT_LENGTH); md > 0 {
+	if md := math.Mod(p.Format.Duration, HlsSegmentLength); md > 0 {
 		response += fmt.Sprintf("#EXTINF:%.4f, nodesc\n", md)
 		response += fmt.Sprintf("/hls/hls_%d.ts?path=%s\n", i, cacheName)
 	}
@@ -171,7 +167,7 @@ func hls_transcode(ctx App, res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	startTime := segmentNumber * HLS_SEGMENT_LENGTH
+	startTime := segmentNumber * HlsSegmentLength
 	cachePath := filepath.Join(
 		GetCurrentDir(),
 		VideoCachePath,
@@ -187,16 +183,16 @@ func hls_transcode(ctx App, res http.ResponseWriter, req *http.Request) {
 		"-timelimit", "30",
 		"-ss", fmt.Sprintf("%d.00", startTime),
 		"-i", cachePath,
-		"-t", fmt.Sprintf("%d.00", HLS_SEGMENT_LENGTH),
+		"-t", fmt.Sprintf("%d.00", HlsSegmentLength),
 		"-vf", fmt.Sprintf("scale=-2:%d", 720),
 		"-vcodec", "libx264",
 		"-preset", "veryfast",
 		"-acodec", "aac",
 		"-pix_fmt", "yuv420p",
 		"-x264opts:0", "subme=0:me_range=4:rc_lookahead=10:me=dia:no_chroma_me:8x8dct=0:partitions=none",
-		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d.000)", HLS_SEGMENT_LENGTH),
+		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d.000)", HlsSegmentLength),
 		"-f", "ssegment",
-		"-segment_time", fmt.Sprintf("%d.00", HLS_SEGMENT_LENGTH),
+		"-segment_time", fmt.Sprintf("%d.00", HlsSegmentLength),
 		"-segment_start_number", fmt.Sprintf("%d", segmentNumber),
 		"-initial_offset", fmt.Sprintf("%d.00", startTime),
 		"-vsync", "2",
@@ -212,11 +208,11 @@ func hls_transcode(ctx App, res http.ResponseWriter, req *http.Request) {
 type FFProbeData struct {
 	Format struct {
 		Duration float64 `json:"duration,string"`
-		BitRate int `json:"bit_rate,string"`
-	} `json: "format"`
+		BitRate  int     `json:"bit_rate,string"`
+	} `json:"format"`
 	Streams []struct {
-		CodecType string `json:"codec_type"`
-		CodecName string `json:"codec_name"`
+		CodecType   string `json:"codec_type"`
+		CodecName   string `json:"codec_name"`
 		PixelFormat string `json:"pix_fmt"`
 	} `json:"streams"`
 }
@@ -229,7 +225,7 @@ func ffprobe(videoPath string) (FFProbeData, error) {
 		"ffprobe", strings.Split(fmt.Sprintf(
 			"-v quiet -print_format json -show_format -show_streams %s",
 			videoPath,
-		), " ")...
+		), " ")...,
 	)
 	cmd.Stdout = &stream
 	if err := cmd.Run(); err != nil {

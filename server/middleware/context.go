@@ -7,19 +7,7 @@ import (
 	"net/http"
 )
 
-func BodyParser (fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, res http.ResponseWriter, req *http.Request) {
-	extractBody := func(req *http.Request) (map[string]interface{}, error) {
-		var body map[string]interface{}
-		byt, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			return body, err
-		}
-		if err := json.Unmarshal(byt, &body); err != nil {
-			return body, err
-		}
-		return body, nil
-	}
-
+func BodyParser(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, res http.ResponseWriter, req *http.Request) {
 	return func(ctx App, res http.ResponseWriter, req *http.Request) {
 		var err error
 		if ctx.Body, err = extractBody(req); err != nil {
@@ -28,4 +16,16 @@ func BodyParser (fn func(App, http.ResponseWriter, *http.Request)) func(ctx App,
 		}
 		fn(ctx, res, req)
 	}
+}
+
+func extractBody(req *http.Request) (map[string]interface{}, error) {
+	var body map[string]interface{}
+	byt, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return body, err
+	}
+	if err := json.Unmarshal(byt, &body); err != nil {
+		return body, err
+	}
+	return body, nil
 }

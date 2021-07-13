@@ -14,15 +14,15 @@ func AdminSessionGet(ctx App, res http.ResponseWriter, req *http.Request) {
 		SendSuccessResult(res, true)
 		return
 	}
-	obfuscate := func() string{
-		c, err := req.Cookie(COOKIE_NAME_ADMIN)
+	obfuscate := func() string {
+		c, err := req.Cookie(CookieNameAdmin)
 		if err != nil {
 			return ""
 		}
 		return c.Value
 	}()
 
-	str, err := DecryptString(SECRET_KEY_DERIVATE_FOR_ADMIN, obfuscate);
+	str, err := DecryptString(SecretKeyDerivateForAdmin, obfuscate)
 	if err != nil {
 		SendSuccessResult(res, false)
 		return
@@ -30,10 +30,10 @@ func AdminSessionGet(ctx App, res http.ResponseWriter, req *http.Request) {
 	token := AdminToken{}
 	json.Unmarshal([]byte(str), &token)
 
-	if token.IsValid() == false {
+	if !token.IsValid() {
 		SendSuccessResult(res, false)
 		return
-	} else if token.IsAdmin() == false {
+	} else if !token.IsAdmin() {
 		SendSuccessResult(res, false)
 		return
 	}
@@ -42,7 +42,7 @@ func AdminSessionGet(ctx App, res http.ResponseWriter, req *http.Request) {
 
 func AdminSessionAuthenticate(ctx App, res http.ResponseWriter, req *http.Request) {
 	// Step 1: Deliberatly make the request slower to make hacking attempt harder for the attacker
-	time.Sleep(1500*time.Millisecond)
+	time.Sleep(1500 * time.Millisecond)
 
 	// Step 2: Make sure current user has appropriate access
 	admin := Config.Get("auth.admin").String()
@@ -60,22 +60,22 @@ func AdminSessionAuthenticate(ctx App, res http.ResponseWriter, req *http.Reques
 
 	// Step 3: Send response to the client
 	body, _ := json.Marshal(NewAdminToken())
-	obfuscate, err := EncryptString(SECRET_KEY_DERIVATE_FOR_ADMIN, string(body))
+	obfuscate, err := EncryptString(SecretKeyDerivateForAdmin, string(body))
 	if err != nil {
 		SendErrorResult(res, err)
 		return
 	}
 	http.SetCookie(res, &http.Cookie{
-		Name:   COOKIE_NAME_ADMIN,
-		Value:  obfuscate,
-		Path:   COOKIE_PATH_ADMIN,
-		MaxAge: 60*60, // valid for 1 hour
+		Name:     CookieNameAdmin,
+		Value:    obfuscate,
+		Path:     CookiePathAdmin,
+		MaxAge:   60 * 60, // valid for 1 hour
 		SameSite: http.SameSiteStrictMode,
 	})
 	SendSuccessResult(res, true)
 }
 
-func AdminBackend(ctx App, res http.ResponseWriter, req *http.Request) {	
+func AdminBackend(ctx App, res http.ResponseWriter, req *http.Request) {
 	drivers := Backend.Drivers()
 	backends := make(map[string]Form, len(drivers))
 	for key := range drivers {

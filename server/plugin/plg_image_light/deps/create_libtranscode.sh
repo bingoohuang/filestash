@@ -9,8 +9,8 @@
 set -e
 arch=$(dpkg --print-architecture)
 if [ $arch != "amd64" ] && [ $arch != "armhf" ]; then
-    echo "PLATFORM NOT SUPPORTED"
-    exit 1
+  echo "PLATFORM NOT SUPPORTED"
+  exit 1
 fi
 
 ################################################
@@ -20,7 +20,7 @@ export PATH=~/.local/bin:$PATH
 
 ################################################
 # Stage 1: Get libraw and its dependencies
-INITIAL_PATH=`pwd`
+INITIAL_PATH=$(pwd)
 apt install -y libraw-dev
 cd /tmp/
 # libgomp and libstdc++
@@ -43,11 +43,11 @@ gcc -Wall -c src/libtranscode.c
 ################################################
 # Stage 3: Gather and assemble all the bits and pieces together
 libpath=$(
-    if [ $arch = "amd64" ]; then
-        echo "x86_64-linux-gnu";
-    elif [ $arch = "armhf" ]; then
-        echo "arm-linux-gnueabihf"
-    fi
+  if [ $arch = "amd64" ]; then
+    echo "x86_64-linux-gnu"
+  elif [ $arch = "armhf" ]; then
+    echo "arm-linux-gnueabihf"
+  fi
 )
 ar x /usr/lib/$libpath/libraw.a
 ar x /usr/lib/$libpath/libjpeg.a

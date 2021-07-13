@@ -24,7 +24,7 @@ func WellKnownSecurityHandler(ctx App, res http.ResponseWriter, req *http.Reques
 func HealthHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 	// CHECK 1: open the config file
 	file, err := os.OpenFile(
-		filepath.Join(GetCurrentDir(), CONFIG_PATH, "config.json"),
+		filepath.Join(GetCurrentDir(), ConfigPath, "config.json"),
 		os.O_RDWR, os.ModePerm,
 	)
 	if err != nil {
@@ -35,7 +35,7 @@ func HealthHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 	defer file.Close()
 
 	// CHECK2: read from the filesystem
-    if _, err := file.Read(make([]byte, 10)); err != nil {
+	if _, err := file.Read(make([]byte, 10)); err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		res.Write([]byte(`{"status": "error", "reason": "fs read error"}`))
 		return

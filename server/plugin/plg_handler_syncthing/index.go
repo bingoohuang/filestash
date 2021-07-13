@@ -17,9 +17,10 @@ import (
 	"time"
 )
 
-const SYNCTHING_URI = "/admin/syncthing"
+const SyncthingUri = "/admin/syncthing"
+
 func init() {
-	plugin_enable := Config.Get("features.syncthing.enable").Schema(func(f *FormElement) *FormElement {
+	pluginEnable := Config.Get("features.syncthing.enable").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
@@ -51,18 +52,18 @@ func init() {
 	})
 
 	Hooks.Register.HttpEndpoint(func(r *mux.Router, _ *App) error {
-		if plugin_enable == false {
+		if !pluginEnable {
 			return nil
 		}
-		r.HandleFunc(SYNCTHING_URI, func (res http.ResponseWriter, req *http.Request) {
-			http.Redirect(res, req, SYNCTHING_URI + "/", http.StatusTemporaryRedirect)
+		r.HandleFunc(SyncthingUri, func(res http.ResponseWriter, req *http.Request) {
+			http.Redirect(res, req, SyncthingUri+"/", http.StatusTemporaryRedirect)
 		})
-		r.Handle(SYNCTHING_URI + "/", AuthBasic(
+		r.Handle(SyncthingUri+"/", AuthBasic(
 			func() (string, string) { return "admin", Config.Get("auth.admin").String() },
 			http.HandlerFunc(SyncthingProxyHandler),
 		))
 
-		r.PathPrefix(SYNCTHING_URI + "/").HandlerFunc(SyncthingProxyHandler)
+		r.PathPrefix(SyncthingUri + "/").HandlerFunc(SyncthingProxyHandler)
 		return nil
 	})
 }
@@ -78,7 +79,7 @@ func AuthBasic(credentials func() (string, string), fn http.Handler) http.Handle
 
 	return func(res http.ResponseWriter, req *http.Request) {
 		auth := req.Header.Get("Authorization")
-		if strings.HasPrefix(auth, "Basic ") == false {
+		if !strings.HasPrefix(auth, "Basic ") {
 			notAuthorised(res, req)
 			return
 		}
@@ -110,8 +111,8 @@ func AuthBasic(credentials func() (string, string), fn http.Handler) http.Handle
 }
 
 func SyncthingProxyHandler(res http.ResponseWriter, req *http.Request) {
-	req.URL.Path = strings.TrimPrefix(req.URL.Path, SYNCTHING_URI)
-	req.Header.Set("X-Forwarded-Host", req.Host + SYNCTHING_URI)
+	req.URL.Path = strings.TrimPrefix(req.URL.Path, SyncthingUri)
+	req.Header.Set("X-Forwarded-Host", req.Host+SyncthingUri)
 	req.Header.Set("X-Forwarded-Proto", func() string {
 		if scheme := req.Header.Get("X-Forwarded-Proto"); scheme != "" {
 			return scheme

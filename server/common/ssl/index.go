@@ -2,15 +2,15 @@ package ssl
 
 import (
 	. "github.com/mickael-kerjean/filestash/server/common"
-	"path/filepath"
 	"os"
+	"path/filepath"
 )
 
-var keyPEMPath  string = filepath.Join(GetCurrentDir(), CERT_PATH, "key.pem")
-var certPEMPath string = filepath.Join(GetCurrentDir(), CERT_PATH, "cert.pem")
+var keyPEMPath = filepath.Join(GetCurrentDir(), CertPath, "key.pem")
+var certPEMPath = filepath.Join(GetCurrentDir(), CertPath, "cert.pem")
 
 func init() {
-	os.MkdirAll(filepath.Join(GetCurrentDir(), CERT_PATH), os.ModePerm)
+	os.MkdirAll(filepath.Join(GetCurrentDir(), CertPath), os.ModePerm)
 }
 
 func Clear() {

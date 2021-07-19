@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
+	"time"
 )
 
 func LoggedInOnly(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, res http.ResponseWriter, req *http.Request) {
@@ -25,7 +27,7 @@ func LoggedInOnly(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App
 
 func AdminOnly(fn func(App, http.ResponseWriter, *http.Request)) func(ctx App, res http.ResponseWriter, req *http.Request) {
 	return func(ctx App, res http.ResponseWriter, req *http.Request) {
-		if admin := Config.Get("auth.admin").String(); admin != "" {
+		if admin := ConfigAuthAdmin(); admin != "" {
 			c, err := req.Cookie(CookieNameAdmin)
 			if err != nil {
 				SendErrorResult(res, ErrPermissionDenied)
@@ -227,6 +229,40 @@ func _extractShare(req *http.Request) (Share, error) {
 	return s, nil
 }
 
+type SftpConfig struct {
+	Hostname  string    `json:"hostname"`
+	Username  string    `json:"username"`
+	Password  string    `json:"password"`
+	Timestamp time.Time `json:"timestamp"`
+	Type      string    `json:"type"`
+}
+
+func (s SftpConfig) SetSession() {
+	// {"hostkey":"","hostname":"192.168.126.71","passphrase":"","password":"12354678","path":"/","port":"","timestamp":"2021-07-19 15:30:33.374809 +0800 CST m=+40.464059475","type":"sftp","username":"root"}
+	s.Type = "sftp"
+	jso, _ := json.Marshal(s)
+	var session = make(map[string]string)
+	json.Unmarshal(jso, &session)
+
+	SetGlobalSession(session)
+}
+
+func GetGlobalSession() map[string]string {
+	GlobalSessionLock.Lock()
+	defer GlobalSessionLock.Unlock()
+
+	return GlobalSession
+}
+
+func SetGlobalSession(s map[string]string) {
+	GlobalSessionLock.Lock()
+	GlobalSession = s
+	GlobalSessionLock.Unlock()
+}
+
+var GlobalSessionLock sync.Mutex
+var GlobalSession map[string]string
+
 func _extractSession(req *http.Request, ctx *App) (map[string]string, error) {
 	var str string
 	var err error
@@ -255,20 +291,25 @@ func _extractSession(req *http.Request, ctx *App) (map[string]string, error) {
 			session["path"] = strings.TrimSuffix(ctx.Share.Path, path) + "/"
 		}
 		return session, err
-	} else {
-		cookie, err := req.Cookie(CookieNameAuth)
-		if err != nil {
-			return session, nil
-		}
-		str = cookie.Value
-		str, err = DecryptString(SecretKeyDerivateForUser, str)
-		if err != nil {
-			// This typically happen when changing the secret key
-			return session, nil
-		}
-		err = json.Unmarshal([]byte(str), &session)
-		return session, err
 	}
+
+	s := GetGlobalSession()
+	if s != nil {
+		return s, nil
+	}
+
+	cookie, err := req.Cookie(CookieNameAuth)
+	if err != nil {
+		return session, nil
+	}
+	str = cookie.Value
+	str, err = DecryptString(SecretKeyDerivateForUser, str)
+	if err != nil {
+		// This typically happen when changing the secret key
+		return session, nil
+	}
+	err = json.Unmarshal([]byte(str), &session)
+	return session, err
 }
 
 func _extractBackend(req *http.Request, ctx *App) (IBackend, error) {

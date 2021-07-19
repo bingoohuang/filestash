@@ -11,8 +11,7 @@ import (
 )
 
 var (
-	logpath    = filepath.Join(GetCurrentDir(), LogPath, "access.log")
-	configpath = filepath.Join(GetCurrentDir(), ConfigPath, "config.json")
+	logpath = filepath.Join(GetCurrentDir(), LogPath, "access.log")
 )
 
 func FetchLogHandler(ctx App, res http.ResponseWriter, req *http.Request) {
@@ -54,7 +53,7 @@ func PrivateConfigHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 func PrivateConfigUpdateHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 	b, _ := ioutil.ReadAll(req.Body)
 	b = PrettyPrint(b)
-	file, err := os.Create(configpath)
+	file, err := os.Create(ConfigJSONPath)
 	if err != nil {
 		SendErrorResult(res, err)
 		return

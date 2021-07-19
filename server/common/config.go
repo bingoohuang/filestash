@@ -15,9 +15,15 @@ import (
 )
 
 var (
-	Config     Configuration
-	configPath = filepath.Join(GetCurrentDir(), ConfigPath+"config.json")
+	Config         Configuration
+	ConfigJSONPath = filepath.Join(GetCurrentDir(), "config.json")
 )
+
+func ConfigAuthAdmin() string {
+	return Config.Get(AuthAdmin).String()
+}
+
+const AuthAdmin = "auth.admin"
 
 type Configuration struct {
 	onChange       []ChangeListener
@@ -200,7 +206,7 @@ func (f *Form) Iterator() []FormIterator {
 }
 
 func (c *Configuration) Load() {
-	file, err := os.OpenFile(configPath, os.O_RDONLY, os.ModePerm)
+	file, err := os.OpenFile(ConfigJSONPath, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		Log.Warning("Can't read from config file")
 		return
@@ -278,7 +284,7 @@ func (c *Configuration) Debug() *FormElement {
 
 func (c *Configuration) Initialise() {
 	if env := os.Getenv("ADMIN_PASSWORD"); env != "" {
-		c.Get("auth.admin").Set(env)
+		c.Get(AuthAdmin).Set(env)
 	}
 	if env := os.Getenv("APPLICATION_URL"); env != "" {
 		c.Get("general.host").Set(env).String()
@@ -337,9 +343,9 @@ func (c *Configuration) Save() *Configuration {
 	v, _ = sjson.Set(v, "connections", c.Conn)
 
 	// deploy the config in our config.json
-	file, err := os.Create(configPath)
+	file, err := os.Create(ConfigJSONPath)
 	if err != nil {
-		Log.Error("Filestash needs to be able to create/edit its own configuration which it can't at the moment. Change the permission for filestash to create and edit `%s`", configPath)
+		Log.Error("Filestash needs to be able to create/edit its own configuration which it can't at the moment. Change the permission for filestash to create and edit `%s`", ConfigJSONPath)
 		return c
 	}
 	defer file.Close()

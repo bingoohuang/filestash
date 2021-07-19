@@ -1,15 +1,15 @@
 import React from 'react';
 
-import { Input, Button, Container, Icon, NgIf, Loader } from '../../components/';
-import { Config, Admin } from '../../model/';
-import { notify, FormObjToJSON, alert, prompt } from '../../helpers';
-import { bcrypt_password } from '../../helpers/bcrypt';
+import {Button, Icon, Input, Loader, NgIf} from '../../components/';
+import {Admin, Config} from '../../model/';
+import {alert, FormObjToJSON, notify} from '../../helpers';
+import {bcrypt_password} from '../../helpers/bcrypt';
 import ReactCSSTransitionGroup from 'react-addons-css-transition-group';
 
 import "./setup.scss";
 
 export class SetupPage extends React.Component {
-    constructor(props){
+    constructor(props) {
         super(props);
         this.state = {
             busy: false,
@@ -23,27 +23,29 @@ export class SetupPage extends React.Component {
         };
 
         Config.all().then((config) => {
-            if(config.log.telemetry.value === true) return;
+            if (config.log.telemetry.value === true) return;
             this.unlisten = this.props.history.listen((location, action) => {
                 this.unlisten();
                 alert.now((
                     <div>
-                      <p style={{textAlign: 'justify'}}>
-                        Help making this software better by sending crash reports and anonymous usage statistics
-                      </p>
-                      <form onSubmit={start.bind(this)} style={{fontSize: '0.9em', marginTop: '10px'}}>
-                        <label>
-                          <Input type="checkbox" style={{width: 'inherit', marginRight: '10px'}} onChange={(e) => this.enableLog(e.target.checked)} defaultChecked={config.log.telemetry.value} />
-                          I accept but the data is not to be share with any third party
-                        </label>
-                      </form>
+                        <p style={{textAlign: 'justify'}}>
+                            Help making this software better by sending crash reports and anonymous usage statistics
+                        </p>
+                        <form onSubmit={start.bind(this)} style={{fontSize: '0.9em', marginTop: '10px'}}>
+                            <label>
+                                <Input type="checkbox" style={{width: 'inherit', marginRight: '10px'}}
+                                       onChange={(e) => this.enableLog(e.target.checked)}
+                                       defaultChecked={config.log.telemetry.value}/>
+                                I accept but the data is not to be share with any third party
+                            </label>
+                        </form>
                     </div>
                 ));
             });
         });
     }
 
-    onAdminPassword(p, done){
+    onAdminPassword(p, done) {
         this.setState({busy: true});
         Config.all().then((config) => {
             return bcrypt_password(p).then((hash) => {
@@ -67,7 +69,7 @@ export class SetupPage extends React.Component {
         });
     }
 
-    enableLog(value){
+    enableLog(value) {
         Config.all().then((config) => {
             config = FormObjToJSON(config);
             config.connections = window.CONFIG.connections;
@@ -76,7 +78,7 @@ export class SetupPage extends React.Component {
         });
     };
 
-    summaryCall(){
+    summaryCall() {
         this.setState({busy: true});
         return Config.all().then((config) => {
             this.setState({busy: false});
@@ -113,12 +115,12 @@ export class SetupPage extends React.Component {
         });
     }
 
-    render(){
+    render() {
         return (
             <div className="component_setup">
-              <MultiStepForm loading={this.state.busy}
-                             onAdminPassword={this.onAdminPassword.bind(this)}
-                             summaryCall={this.summaryCall.bind(this)} />
+                <MultiStepForm loading={this.state.busy}
+                               onAdminPassword={this.onAdminPassword.bind(this)}
+                               summaryCall={this.summaryCall.bind(this)}/>
             </div>
         );
     }
@@ -126,7 +128,7 @@ export class SetupPage extends React.Component {
 
 
 class MultiStepForm extends React.Component {
-    constructor(props){
+    constructor(props) {
         super(props);
         this.state = {
             current: parseInt(window.location.hash.replace("#", "")) || 0,
@@ -136,15 +138,15 @@ class MultiStepForm extends React.Component {
         };
     }
 
-    componentDidMount(){
-        if(this.state.current === 1){
+    componentDidMount() {
+        if (this.state.current === 1) {
             this.props.summaryCall().then((deps) => {
                 this.setState({deps: deps});
             });
         }
     }
 
-    onAdminPassword(e){
+    onAdminPassword(e) {
         e.preventDefault();
         this.props.onAdminPassword(this.state.answer_password, () => {
             this.setState({has_answered_password: true});
@@ -152,59 +154,70 @@ class MultiStepForm extends React.Component {
         });
     }
 
-    onStepChange(n){
+    onStepChange(n) {
         this.setState({current: n}, () => {
-            if(n === 1) this.componentDidMount();
+            if (n === 1) this.componentDidMount();
         });
     }
 
     render() {
-        const hideMenu = <style dangerouslySetInnerHTML={{__html: ".component_menu_sidebar{transform: translateX(-300px)}"}} />;
-        if(this.state.current === 0) {
+        const hideMenu = <style
+            dangerouslySetInnerHTML={{__html: ".component_menu_sidebar{transform: translateX(-300px)}"}}/>;
+        if (this.state.current === 0) {
             return (
                 <div id="step1">
-                  <FormStage navleft={false} navright={this.state.has_answered_password === true} current={this.state.current} onStepChange={this.onStepChange.bind(this)}>
-                    Admin Password
-                  </FormStage>
-                  <ReactCSSTransitionGroup transitionName="stepper-form" transitionEnterTimeout={600} transitionAppearTimeout={600} transitionAppear={true} transitionEnter={true} transitionLeave={false}>
-                    <div key={this.state.current}>
-                      <p>Create your instance admin password: </p>
-                      <form onSubmit={this.onAdminPassword.bind(this)}>
-                        <Input ref="$input" type="password" placeholder="Password" value={this.state.answer_password} onChange={(e) => this.setState({answer_password: e.target.value})}/>
-                        <Button theme="transparent">
-                          <Icon name={this.props.loading ? "loading" : "arrow_right"}/>
-                        </Button>
-                      </form>
-                    </div>
-                  </ReactCSSTransitionGroup>
-                {hideMenu}
+                    <FormStage navleft={false} navright={this.state.has_answered_password === true}
+                               current={this.state.current} onStepChange={this.onStepChange.bind(this)}>
+                        Admin Password
+                    </FormStage>
+                    <ReactCSSTransitionGroup transitionName="stepper-form" transitionEnterTimeout={600}
+                                             transitionAppearTimeout={600} transitionAppear={true}
+                                             transitionEnter={true} transitionLeave={false}>
+                        <div key={this.state.current}>
+                            <p>Create your instance admin password: </p>
+                            <form onSubmit={this.onAdminPassword.bind(this)}>
+                                <Input ref="$input" type="password" placeholder="Password"
+                                       value={this.state.answer_password}
+                                       onChange={(e) => this.setState({answer_password: e.target.value})}/>
+                                <Button theme="transparent">
+                                    <Icon name={this.props.loading ? "loading" : "arrow_right"}/>
+                                </Button>
+                            </form>
+                        </div>
+                    </ReactCSSTransitionGroup>
+                    {hideMenu}
                 </div>
             );
-        } else if(this.state.current === 1) {
+        } else if (this.state.current === 1) {
             return (
                 <div id="step2">
-                  <FormStage navleft={true} navright={false} current={this.state.current} onStepChange={this.onStepChange.bind(this)}>
-                    Summary
-                  </FormStage>
-                  <ReactCSSTransitionGroup transitionName="stepper-form" transitionEnterTimeout={600} transitionAppearTimeout={600} transitionAppear={true} transitionEnter={true} transitionLeave={false}>
-                    <div key={this.state.current}>
-                      <NgIf cond={!!this.props.loading}>
-                        <Loader/>
-                        <div style={{textAlign: "center"}}>Verifying</div>
-                      </NgIf>
-                      <NgIf cond={!this.props.loading}>
-                        {
-                            this.state.deps.map((dep, idx) => {
-                                return (
-                                    <div className={"component_dependency_installed" + (dep.pass ? " yes" : " no") + (dep.severe ? " severe" : "")} key={idx}>
-                                      <span>{dep.pass ? dep.name_success : dep.name_failure}</span>{dep.pass ? null : ": " + dep.message}
-                                    </div>
-                                );
-                            })
-                        }
-                      </NgIf>
-                    </div>
-                  </ReactCSSTransitionGroup>
+                    <FormStage navleft={true} navright={false} current={this.state.current}
+                               onStepChange={this.onStepChange.bind(this)}>
+                        Summary
+                    </FormStage>
+                    <ReactCSSTransitionGroup transitionName="stepper-form" transitionEnterTimeout={600}
+                                             transitionAppearTimeout={600} transitionAppear={true}
+                                             transitionEnter={true} transitionLeave={false}>
+                        <div key={this.state.current}>
+                            <NgIf cond={!!this.props.loading}>
+                                <Loader/>
+                                <div style={{textAlign: "center"}}>Verifying</div>
+                            </NgIf>
+                            <NgIf cond={!this.props.loading}>
+                                {
+                                    this.state.deps.map((dep, idx) => {
+                                        return (
+                                            <div
+                                                className={"component_dependency_installed" + (dep.pass ? " yes" : " no") + (dep.severe ? " severe" : "")}
+                                                key={idx}>
+                                                <span>{dep.pass ? dep.name_success : dep.name_failure}</span>{dep.pass ? null : ": " + dep.message}
+                                            </div>
+                                        );
+                                    })
+                                }
+                            </NgIf>
+                        </div>
+                    </ReactCSSTransitionGroup>
                 </div>
             );
         }
@@ -215,17 +228,19 @@ class MultiStepForm extends React.Component {
 const FormStage = (props) => {
     return (
         <h4>
-          { props.navleft === true ? <Icon name="arrow_left" onClick={() => props.onStepChange(props.current - 1)}/> : null}
-          { props.children }
-          { props.navright === true ? <Icon name="arrow_right" onClick={() => props.onStepChange(props.current + 1)}/> : null }
+            {props.navleft === true ?
+                <Icon name="arrow_left" onClick={() => props.onStepChange(props.current - 1)}/> : null}
+            {props.children}
+            {props.navright === true ?
+                <Icon name="arrow_right" onClick={() => props.onStepChange(props.current + 1)}/> : null}
         </h4>
     );
 };
 
-function objectGet(obj, paths){
+function objectGet(obj, paths) {
     let value = obj;
-    for(let i=0; i<paths.length; i++){
-        if(typeof value !== "object") return null;
+    for (let i = 0; i < paths.length; i++) {
+        if (typeof value !== "object") return null;
         value = value[paths[i]];
     }
     return value;

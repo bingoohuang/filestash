@@ -12,8 +12,8 @@ func GetCurrentDir() string {
 	if MockCurrentDir != "" {
 		return MockCurrentDir
 	}
-	ex, _ := os.Executable()
-	return filepath.Dir(ex)
+	ex, _ := os.Getwd()
+	return ex
 }
 
 func GetAbsolutePath(p string) string {

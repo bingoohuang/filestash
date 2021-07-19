@@ -86,20 +86,20 @@ if (process.env.NODE_ENV === 'production') {
         sourceMap: false,
         extractComments: true,
     }));
-    config.plugins.push(new CompressionPlugin({
-        asset: "[path].gz[query]",
-        algorithm: "gzip",
-        test: /\.js$|\.json$|\.html$|\.svg|\.ico$/,
-        threshold: 0,
-        minRatio: 0.8
-    }));
-    config.plugins.push(new CompressionPlugin({
-        asset: "[path].br[query]",
-        algorithm: "brotliCompress",
-        test: /\.js$|\.json$|\.html$|\.svg|\.ico$/,
-        threshold: 0,
-        minRatio: 0.8
-    }));
+    // config.plugins.push(new CompressionPlugin({
+    //     asset: "[path].gz[query]",
+    //     algorithm: "gzip",
+    //     test: /\.js$|\.json$|\.html$|\.svg|\.ico$/,
+    //     threshold: 0,
+    //     minRatio: 0.8
+    // }));
+    // config.plugins.push(new CompressionPlugin({
+    //     asset: "[path].br[query]",
+    //     algorithm: "brotliCompress",
+    //     test: /\.js$|\.json$|\.html$|\.svg|\.ico$/,
+    //     threshold: 0,
+    //     minRatio: 0.8
+    // }));
 } else {
     config.devtool = '#inline-source-map';
 }

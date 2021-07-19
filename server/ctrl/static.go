@@ -2,21 +2,32 @@ package ctrl
 
 import (
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/ss"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"io"
+	"io/fs"
 	"net/http"
-	URL "net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"text/template"
 )
 
+func EmbedChangePathHandler(root fs.FS, changePath string) func(App, http.ResponseWriter, *http.Request) {
+	return func(ctx App, w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = changePath
+		http.FileServer(http.FS(root)).ServeHTTP(w, r)
+	}
+}
+func EmbedHandler(root fs.FS) func(App, http.ResponseWriter, *http.Request) {
+	return func(ctx App, w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.FS(root)).ServeHTTP(w, r)
+	}
+}
 func StaticHandler(_path string) func(App, http.ResponseWriter, *http.Request) {
 	return func(ctx App, res http.ResponseWriter, req *http.Request) {
-		var base = GetAbsolutePath(_path)
-		var srcPath string
-		if srcPath = JoinPath(base, req.URL.Path); srcPath == base {
+		base := GetAbsolutePath(_path)
+		srcPath := JoinPath(base, req.URL.Path)
+		if srcPath == base {
 			http.NotFound(res, req)
 			return
 		}
@@ -26,24 +37,17 @@ func StaticHandler(_path string) func(App, http.ResponseWriter, *http.Request) {
 
 func IndexHandler(_path string) func(App, http.ResponseWriter, *http.Request) {
 	return func(ctx App, res http.ResponseWriter, req *http.Request) {
-		urlObj, err := URL.Parse(req.URL.String())
-		if err != nil {
-			NotFoundHandler(ctx, res, req)
-			return
-		}
-		url := urlObj.Path
+		p := req.URL.Path
 
-		if url != UrlSetup && Config.Get("auth.admin").String() == "" {
+		/*if p != UrlSetup && ConfigAuthAdmin() == "" {
 			http.Redirect(res, req, UrlSetup, http.StatusTemporaryRedirect)
 			return
-		} else if url != "/" && !strings.HasPrefix(url, "/s/") &&
-			!strings.HasPrefix(url, "/view/") && !strings.HasPrefix(url, "/files/") &&
-			url != "/login" && url != "/logout" && !strings.HasPrefix(url, "/admin") {
+		} else */if !ss.AnyOf(p, "/", "/login", "/logout") && !ss.HasPrefix(p, "/s/", "/view/", "/files/", "/admin") {
 			NotFoundHandler(ctx, res, req)
 			return
 		}
 		ua := req.Header.Get("User-Agent")
-		if strings.Contains(ua, "MSIE ") || strings.Contains(ua, "Trident/") || strings.Contains(ua, "Edge/") {
+		if ss.Contains(ua, "MSIE ", "Trident/", "Edge/") {
 			// Microsoft is behaving on many occasion differently than Firefox / Chrome.
 			// I have neither the time / motivation for it to work properly
 			res.WriteHeader(http.StatusBadRequest)
@@ -63,18 +67,16 @@ func IndexHandler(_path string) func(App, http.ResponseWriter, *http.Request) {
 	}
 }
 
-func NotFoundHandler(ctx App, res http.ResponseWriter, req *http.Request) {
+func NotFoundHandler(_ App, res http.ResponseWriter, _ *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
 	res.Write([]byte(Page(`<img style="max-width:800px" src="/assets/icons/404.svg" />`)))
 }
 
-func AboutHandler(ctx App, res http.ResponseWriter, req *http.Request) {
+func AboutHandler(_ App, res http.ResponseWriter, _ *http.Request) {
 	t, _ := template.New("about").Parse(Page(`
 	  <h1> {{index .App 0}} </h1>
 	  <table>
 		<tr> <td> Commit hash </td> <td> {{ index .App 1}} </td> </tr>
-		<tr> <td> Binary hash </td> <td> {{ index .App 2}} </td> </tr>
-		<tr> <td> Config hash </td> <td> {{ index .App 3}} </td> </tr>
 	  </table>
 	  <style>
 		table { margin: 0 auto; font-family: monospace; opacity: 0.8; }
@@ -86,12 +88,10 @@ func AboutHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 	}{[]string{
 		"Filestash " + AppVersion + "." + BuildDate,
 		BuildRef,
-		hashFileContent(filepath.Join(GetCurrentDir(), "/filestash"), 0),
-		hashFileContent(filepath.Join(GetCurrentDir(), ConfigPath, "config.json"), 0),
 	}})
 }
 
-func CustomCssHandler(ctx App, res http.ResponseWriter, req *http.Request) {
+func CustomCssHandler(_ App, res http.ResponseWriter, _ *http.Request) {
 	res.Header().Set("Content-Type", "text/css")
 	io.WriteString(res, Config.Get("general.custom_css").String())
 }

@@ -59,7 +59,7 @@ func init() {
 			http.Redirect(res, req, SyncthingUri+"/", http.StatusTemporaryRedirect)
 		})
 		r.Handle(SyncthingUri+"/", AuthBasic(
-			func() (string, string) { return "admin", Config.Get("auth.admin").String() },
+			func() (string, string) { return "admin", ConfigAuthAdmin() },
 			http.HandlerFunc(SyncthingProxyHandler),
 		))
 

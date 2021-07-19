@@ -11,7 +11,7 @@ import (
 
 type Middleware func(func(App, http.ResponseWriter, *http.Request)) func(App, http.ResponseWriter, *http.Request)
 
-func Chain(fn func(App, http.ResponseWriter, *http.Request), app App, m ...Middleware) http.HandlerFunc {
+func Chain(fn func(App, http.ResponseWriter, *http.Request), m []Middleware, app App) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		resw := NewResponseWriter(res)
 		f := fn

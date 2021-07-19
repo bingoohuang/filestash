@@ -5,7 +5,6 @@ import (
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"net/http"
 	"os"
-	"path/filepath"
 )
 
 func ReportHandler(ctx App, res http.ResponseWriter, req *http.Request) {
@@ -23,10 +22,7 @@ func WellKnownSecurityHandler(ctx App, res http.ResponseWriter, req *http.Reques
 
 func HealthHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 	// CHECK 1: open the config file
-	file, err := os.OpenFile(
-		filepath.Join(GetCurrentDir(), ConfigPath, "config.json"),
-		os.O_RDWR, os.ModePerm,
-	)
+	file, err := os.OpenFile(ConfigJSONPath, os.O_RDWR, os.ModePerm)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		res.Write([]byte(`{"status": "error", "reason": "filesystem error"}`))

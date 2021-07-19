@@ -84,7 +84,7 @@ func init() {
 
 	Hooks.Register.ProcessFileContentBeforeSend(hlsPlaylist)
 	Hooks.Register.HttpEndpoint(func(r *mux.Router, app *App) error {
-		r.PathPrefix("/hls/hls_{segment}.ts").Handler(Chain(hls_transcode, *app, SecureHeaders)).Methods("GET")
+		r.PathPrefix("/hls/hls_{segment}.ts").Handler(Chain(hls_transcode, []Middleware{SecureHeaders}, *app)).Methods("GET")
 		return nil
 	})
 

@@ -1,4 +1,4 @@
-import { http_post, http_get } from '../helpers';
+import { http_post, http_get } from "../helpers";
 
 export const Admin = {
     login: function(password = ""){

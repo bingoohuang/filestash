@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-func AdminSessionGet(ctx App, res http.ResponseWriter, req *http.Request) {
-	if admin := Config.Get("auth.admin").String(); admin == "" {
+func AdminSessionGet(_ App, res http.ResponseWriter, req *http.Request) {
+	if admin := ConfigAuthAdmin(); admin == "" {
 		SendSuccessResult(res, true)
 		return
 	}
@@ -45,7 +45,7 @@ func AdminSessionAuthenticate(ctx App, res http.ResponseWriter, req *http.Reques
 	time.Sleep(1500 * time.Millisecond)
 
 	// Step 2: Make sure current user has appropriate access
-	admin := Config.Get("auth.admin").String()
+	admin := ConfigAuthAdmin()
 	if admin == "" {
 		SendErrorResult(res, NewError("Missing admin account, please contact your administrator", 500))
 		return

@@ -24,11 +24,12 @@ const (
 )
 
 func init() {
-	os.MkdirAll(filepath.Join(GetCurrentDir(), LogPath), os.ModePerm)
-	os.MkdirAll(filepath.Join(GetCurrentDir(), FtsPath), os.ModePerm)
-	os.MkdirAll(filepath.Join(GetCurrentDir(), ConfigPath), os.ModePerm)
-	os.RemoveAll(filepath.Join(GetCurrentDir(), TmpPath))
-	os.MkdirAll(filepath.Join(GetCurrentDir(), TmpPath), os.ModePerm)
+	cd := GetCurrentDir()
+	os.MkdirAll(filepath.Join(cd, LogPath), os.ModePerm)
+	os.MkdirAll(filepath.Join(cd, FtsPath), os.ModePerm)
+	os.MkdirAll(filepath.Join(cd, ConfigPath), os.ModePerm)
+	os.RemoveAll(filepath.Join(cd, TmpPath))
+	os.MkdirAll(filepath.Join(cd, TmpPath), os.ModePerm)
 }
 
 var (

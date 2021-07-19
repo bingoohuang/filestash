@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/bingoohuang/gg v0.0.0-20210714022056-758998dde3b1
 	github.com/cretz/bine v0.1.0
-	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.1
 	github.com/kr/pty v1.1.8

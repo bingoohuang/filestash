@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"os/exec"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -35,9 +36,28 @@ type AppConfig struct {
 	Port int
 }
 
+func openBrowser(url string) {
+	var err error
+
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		Log.Warning("openbrowser: %v", err)
+	}
+}
+
 func (appConfig AppConfig) Init(a *App) {
 	if appConfig.Port > 0 {
-		plg_starter_http.Register(appConfig.Port)
+		port := plg_starter_http.Register(appConfig.Port)
+		go openBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
 	}
 
 	var middlewares []Middleware

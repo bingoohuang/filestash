@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func Register(port int) {
+func Register(port int) int {
 	for !freeport.IsPortFree(port) {
 		port++
 	}
@@ -28,6 +28,8 @@ func Register(port int) {
 			}
 		}()
 	})
+
+	return port
 }
 
 func ensureAppHasBooted(address string, message string) {

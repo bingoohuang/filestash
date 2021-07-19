@@ -23,7 +23,10 @@ func Chain(fn func(App, http.ResponseWriter, *http.Request), m []Middleware, app
 		if req.Body != nil {
 			req.Body.Close()
 		}
-		go Logger(app, &resw, req)
+
+		if app.LogEnabled {
+			go Logger(app, &resw, req)
+		}
 	}
 }
 

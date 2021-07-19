@@ -2,7 +2,7 @@ package plg_image_golang
 
 import (
 	"bytes"
-	. "github.com/mickael-kerjean/filestash/server/common"
+	. "github.com/bingoohuang/filestash/server/common"
 	"golang.org/x/image/draw"
 	"image"
 	_ "image/gif"

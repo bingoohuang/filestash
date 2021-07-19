@@ -1,4 +1,4 @@
-module github.com/mickael-kerjean/filestash
+module github.com/bingoohuang/filestash
 
 go 1.16
 

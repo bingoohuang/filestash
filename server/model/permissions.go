@@ -1,7 +1,7 @@
 package model
 
 import (
-	. "github.com/mickael-kerjean/filestash/server/common"
+	. "github.com/bingoohuang/filestash/server/common"
 )
 
 func CanRead(ctx *App) bool {

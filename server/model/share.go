@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/mattn/go-sqlite3"
-	. "github.com/mickael-kerjean/filestash/server/common"
+	. "github.com/bingoohuang/filestash/server/common"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/gomail.v2"
 	"html/template"

@@ -3,7 +3,7 @@ package ctrl
 import (
 	"fmt"
 	"github.com/bingoohuang/gg/pkg/ss"
-	. "github.com/mickael-kerjean/filestash/server/common"
+	. "github.com/bingoohuang/filestash/server/common"
 	"io"
 	"io/fs"
 	"net/http"

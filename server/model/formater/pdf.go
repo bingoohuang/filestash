@@ -3,7 +3,7 @@ package formater
 import (
 	"bytes"
 	"fmt"
-	. "github.com/mickael-kerjean/filestash/server/common"
+	. "github.com/bingoohuang/filestash/server/common"
 	"io"
 	"math/rand"
 	"os"

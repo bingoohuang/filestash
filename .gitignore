@@ -1,6 +1,7 @@
 node_modules/
 dist/data/cache
-dist/data//state
+dist/data/state
+/data
 *_generated.go
 test/
 pkg/
@@ -18,3 +19,4 @@ package-lock.json
 .tern-port
 .tern-project.js
 .idea
+/filestash_config.json

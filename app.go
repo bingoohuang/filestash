@@ -3,8 +3,8 @@ package filestash
 import (
 	"embed"
 	"fmt"
+	"github.com/bingoohuang/filestash/server/plugin/plg_starter_http"
 	"github.com/gorilla/mux"
-	"github.com/mickael-kerjean/filestash/server/plugin/plg_starter_http"
 	"io/fs"
 	"net/http"
 	"net/http/pprof"
@@ -13,10 +13,10 @@ import (
 	"runtime/debug"
 	"strconv"
 
-	. "github.com/mickael-kerjean/filestash/server/common"
-	. "github.com/mickael-kerjean/filestash/server/ctrl"
-	. "github.com/mickael-kerjean/filestash/server/middleware"
-	_ "github.com/mickael-kerjean/filestash/server/plugin"
+	. "github.com/bingoohuang/filestash/server/common"
+	. "github.com/bingoohuang/filestash/server/ctrl"
+	. "github.com/bingoohuang/filestash/server/middleware"
+	_ "github.com/bingoohuang/filestash/server/plugin"
 )
 
 //go:embed dist/data/public

@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/mickael-kerjean/filestash"
-	"github.com/mickael-kerjean/filestash/server/common"
-	_ "github.com/mickael-kerjean/filestash/server/plugin"
+	"github.com/bingoohuang/filestash"
+	"github.com/bingoohuang/filestash/server/common"
+	_ "github.com/bingoohuang/filestash/server/plugin"
 )
 
 func main() {
 	app := common.App{}
 
-	filestash.AppConfig{Port: 8334}.Init(&app)
+	filestash.AppConfig{
+		Port: 8334,
+	}.Init(&app)
 }

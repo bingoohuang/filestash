@@ -2,7 +2,7 @@ package backend
 
 import (
 	"encoding/xml"
-	. "github.com/mickael-kerjean/filestash/server/common"
+	. "github.com/bingoohuang/filestash/server/common"
 	"io"
 	"net/http"
 	"net/url"

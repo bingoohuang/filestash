@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/bingoohuang/gg v0.0.0-20210714022056-758998dde3b1
+	github.com/bingoohuang/gonet v0.0.0-20200511075259-cef8ac6cd867
 	github.com/cretz/bine v0.1.0
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.1

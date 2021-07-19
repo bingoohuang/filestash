@@ -3,18 +3,23 @@ package plg_starter_http
 import (
 	"fmt"
 	"github.com/bingoohuang/filestash/server/common"
+	"github.com/bingoohuang/gonet/freeport"
 	"github.com/gorilla/mux"
 	"net/http"
 	"time"
 )
 
 func Register(port int) {
+	for !freeport.IsPortFree(port) {
+		port++
+	}
+
+	addr := fmt.Sprintf(":%d", port)
+
 	common.Hooks.Register.Starter(func(r *mux.Router) {
 		common.Log.Info("[http] starting ...")
-		srv := &http.Server{
-			Addr:    fmt.Sprintf(":%d", port),
-			Handler: r,
-		}
+		fmt.Printf("filestash listening on %s\n", addr)
+		srv := &http.Server{Addr: addr, Handler: r}
 		//go ensureAppHasBooted(fmt.Sprintf("http://127.0.0.1:%d/about", port), fmt.Sprintf("[http] listening on :%d", port))
 		go func() {
 			if err := srv.ListenAndServe(); err != nil {

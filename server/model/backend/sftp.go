@@ -9,14 +9,32 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 var SftpCache AppCache
 
 type Sftp struct {
-	SSHClient  *ssh.Client
+	SSHClient  interface{}
 	SFTPClient *sftp.Client
 }
+
+func GetSftpClient() *Sftp {
+	GlobalSftpMutex.Lock()
+	defer GlobalSftpMutex.Unlock()
+
+	return GlobalSftp
+}
+
+func SetSftpClient(c *Sftp) {
+	GlobalSftpMutex.Lock()
+	defer GlobalSftpMutex.Unlock()
+
+	GlobalSftp = c
+}
+
+var GlobalSftpMutex sync.Mutex
+var GlobalSftp *Sftp
 
 func init() {
 	Backend.Register("sftp", Sftp{})
@@ -66,6 +84,10 @@ func restorePrivateKeyLineBreaks(pass string) string {
 }
 
 func (b Sftp) Init(params map[string]string, app *App) (IBackend, error) {
+	if global := GetSftpClient(); global != nil {
+		return global, nil
+	}
+
 	p := struct {
 		hostname   string
 		port       string
@@ -130,7 +152,7 @@ func (b Sftp) Init(params map[string]string, app *App) (IBackend, error) {
 	}
 	b.SSHClient = client
 
-	session, err := sftp.NewClient(b.SSHClient)
+	session, err := sftp.NewClient(client)
 	if err != nil {
 		return &b, err
 	}
@@ -289,7 +311,12 @@ func (b Sftp) Stat(path string) (os.FileInfo, error) {
 
 func (b Sftp) Close() error {
 	err0 := b.SFTPClient.Close()
-	err1 := b.SSHClient.Close()
+	var err1 error
+	if b.SSHClient != nil {
+		if c, ok := b.SSHClient.(io.Closer); ok {
+			err1 = c.Close()
+		}
+	}
 
 	if err0 != nil {
 		return err0

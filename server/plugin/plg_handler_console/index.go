@@ -7,10 +7,10 @@ package plg_handler_console
 import (
 	"encoding/base64"
 	"encoding/json"
+	. "github.com/bingoohuang/filestash/server/common"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/kr/pty"
-	. "github.com/bingoohuang/filestash/server/common"
 	"golang.org/x/crypto/bcrypt"
 	"io"
 	"net/http"

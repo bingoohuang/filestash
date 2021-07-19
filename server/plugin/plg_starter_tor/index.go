@@ -2,9 +2,9 @@ package plg_starter_tor
 
 import (
 	"context"
+	. "github.com/bingoohuang/filestash/server/common"
 	"github.com/cretz/bine/tor"
 	"github.com/gorilla/mux"
-	. "github.com/bingoohuang/filestash/server/common"
 	"net/http"
 	"os"
 	"path/filepath"

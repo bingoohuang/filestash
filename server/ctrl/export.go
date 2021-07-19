@@ -3,9 +3,9 @@ package ctrl
 import (
 	"bytes"
 	"fmt"
-	"github.com/gorilla/mux"
 	. "github.com/bingoohuang/filestash/server/common"
 	"github.com/bingoohuang/filestash/server/model"
+	"github.com/gorilla/mux"
 	"io"
 	"net/http"
 	"os"

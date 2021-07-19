@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"github.com/mattn/go-sqlite3"
 	. "github.com/bingoohuang/filestash/server/common"
 	"github.com/bingoohuang/filestash/server/model/formater"
+	"github.com/mattn/go-sqlite3"
 	"hash/fnv"
 	"io/ioutil"
 	"os"
@@ -517,7 +517,7 @@ func (s *SearchIndexer) Discover(tx *sql.Tx) bool {
 						Log.Warning("search::discovery invalid_time (%v)", err)
 						return false
 					}
-					if time.Now().Add(time.Duration(- SearchReindex()) * time.Hour).Before(tm) {
+					if time.Now().Add(time.Duration(-SearchReindex()) * time.Hour).Before(tm) {
 						return false
 					}
 					if _, err = tx.Exec("UPDATE file SET indexTime = ? WHERE path = ?", time.Now(), p); err != nil {
@@ -721,7 +721,7 @@ func (s *SearchIndexer) updateFolder(path string, tx *sql.Tx) error {
 func (s *SearchIndexer) Consolidate(tx *sql.Tx) bool {
 	rows, err := tx.Query(
 		"SELECT path, type FROM file WHERE indexTime < ? ORDER BY indexTime DESC LIMIT 5",
-		time.Now().Add(- time.Duration(SearchReindex())*time.Hour),
+		time.Now().Add(-time.Duration(SearchReindex())*time.Hour),
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {

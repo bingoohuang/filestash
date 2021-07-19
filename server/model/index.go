@@ -2,8 +2,8 @@ package model
 
 import (
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
 	. "github.com/bingoohuang/filestash/server/common"
+	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"path/filepath"
 	"time"

@@ -6,8 +6,8 @@ package plg_handler_syncthing
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/gorilla/mux"
 	. "github.com/bingoohuang/filestash/server/common"
+	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/http/httputil"

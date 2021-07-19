@@ -3,9 +3,9 @@ package ctrl
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	. "github.com/bingoohuang/filestash/server/common"
 	"github.com/bingoohuang/filestash/server/model"
+	"github.com/gorilla/mux"
 	"net/http"
 	"strings"
 )

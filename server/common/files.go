@@ -17,8 +17,8 @@ func GetCurrentDir() string {
 	if MockCurrentDir != "" {
 		return MockCurrentDir
 	}
-	ex, _ := os.Getwd()
-	return ex
+	//ex, _ := os.Getwd()
+	return GetHomeDir()
 }
 
 func GetAbsolutePath(p string) string {

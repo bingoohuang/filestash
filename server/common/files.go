@@ -8,6 +8,11 @@ import (
 
 var MockCurrentDir string
 
+func GetHomeDir() string {
+	homeDir, _ := os.UserHomeDir()
+	return filepath.Join(homeDir, ".filestash")
+}
+
 func GetCurrentDir() string {
 	if MockCurrentDir != "" {
 		return MockCurrentDir

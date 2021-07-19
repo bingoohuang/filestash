@@ -128,8 +128,8 @@ func (appConfig AppConfig) Init(a *App) {
 	}
 	initPluginsRoutes(r, a)
 
-	r.PathPrefix("/admin").Handler(Chain(IndexHandler(FileIndex), middlewares, *a)).Methods("GET")
-	r.PathPrefix("/").Handler(Chain(IndexHandler(FileIndex), middlewares, *a)).Methods("GET")
+	GetPrefix(r, "/admin", Chain(EmbedChangePathHandler(AssetsFS, "/"), middlewares, *a))
+	GetPrefix(r, "/", Chain(EmbedChangePathHandler(AssetsFS, "/"), middlewares, *a))
 
 	// Routes are served via plugins to avoid getting stuck with plain HTTP. The idea is to
 	// support many more protocols in the future: HTTPS, HTTP2, TOR or whatever that sounds
@@ -144,8 +144,6 @@ func (appConfig AppConfig) Init(a *App) {
 	for _, obj := range Hooks.Get.Starter() {
 		go obj(r)
 	}
-
-	select {}
 }
 
 func initDebugRoutes(r *mux.Router) {

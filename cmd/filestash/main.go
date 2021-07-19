@@ -9,7 +9,6 @@ import (
 func main() {
 	app := common.App{}
 
-	filestash.AppConfig{
-		Port: 8334,
-	}.Init(&app)
+	filestash.AppConfig{Port: 8334}.Init(&app)
+	select {}
 }

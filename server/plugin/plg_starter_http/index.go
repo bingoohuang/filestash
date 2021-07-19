@@ -15,7 +15,7 @@ func Register(port int) {
 			Addr:    fmt.Sprintf(":%d", port),
 			Handler: r,
 		}
-		go ensureAppHasBooted(fmt.Sprintf("http://127.0.0.1:%d/about", port), fmt.Sprintf("[http] listening on :%d", port))
+		//go ensureAppHasBooted(fmt.Sprintf("http://127.0.0.1:%d/about", port), fmt.Sprintf("[http] listening on :%d", port))
 		go func() {
 			if err := srv.ListenAndServe(); err != nil {
 				common.Log.Error("error: %v", err)

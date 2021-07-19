@@ -16,7 +16,7 @@ import (
 
 var (
 	Config         Configuration
-	ConfigJSONPath = filepath.Join(GetCurrentDir(), "filestash_config.json")
+	ConfigJSONPath = filepath.Join(GetHomeDir(), "filestash_config.json")
 )
 
 func ConfigAuthAdmin() string {

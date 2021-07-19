@@ -24,8 +24,8 @@ const (
 )
 
 func init() {
-	cd := GetCurrentDir()
-	os.MkdirAll(filepath.Join(cd, LogPath), os.ModePerm)
+	cd := GetHomeDir()
+	os.MkdirAll(filepath.Join(GetHomeDir(), LogPath), os.ModePerm)
 	os.MkdirAll(filepath.Join(cd, FtsPath), os.ModePerm)
 	os.MkdirAll(filepath.Join(cd, ConfigPath), os.ModePerm)
 	os.RemoveAll(filepath.Join(cd, TmpPath))

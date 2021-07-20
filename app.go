@@ -36,7 +36,7 @@ type AppConfig struct {
 	Port int
 }
 
-func openBrowser(url string) {
+func OpenBrowser(url string) {
 	var err error
 
 	switch runtime.GOOS {
@@ -54,14 +54,39 @@ func openBrowser(url string) {
 	}
 }
 
-func (appConfig AppConfig) Init(a *App) {
+type InitResult struct {
+	Port int
+	R    *mux.Router
+}
+
+func (r InitResult) Start() bool {
+	// Routes are served via plugins to avoid getting stuck with plain HTTP. The idea is to
+	// support many more protocols in the future: HTTPS, HTTP2, TOR or whatever that sounds
+	// fancy I don't know much when this got written: IPFS, solid, ...
+	Log.Info("Filestash %s starting", AppVersion)
+
+	if len(Hooks.Get.Starter()) == 0 {
+		Log.Warning("No starter plugin available")
+		return false
+	}
+
+	for _, obj := range Hooks.Get.Starter() {
+		go obj(r.R)
+	}
+
+	return true
+}
+
+func (appConfig AppConfig) Init(a *App) (result InitResult) {
 	if appConfig.Port > 0 {
 		port := plg_starter_http.Register(appConfig.Port)
-		go openBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+		result.Port = port
+		go OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
 	}
 
 	var middlewares []Middleware
 	r := mux.NewRouter()
+	result.R = r
 
 	// API for Session
 	session := r.PathPrefix("/api/session").Subrouter()
@@ -151,19 +176,7 @@ func (appConfig AppConfig) Init(a *App) {
 	GetPrefix(r, "/admin", Chain(EmbedChangePathHandler(AssetsFS, "/"), middlewares, *a))
 	GetPrefix(r, "/", Chain(EmbedChangePathHandler(AssetsFS, "/"), middlewares, *a))
 
-	// Routes are served via plugins to avoid getting stuck with plain HTTP. The idea is to
-	// support many more protocols in the future: HTTPS, HTTP2, TOR or whatever that sounds
-	// fancy I don't know much when this got written: IPFS, solid, ...
-	Log.Info("Filestash %s starting", AppVersion)
-
-	if len(Hooks.Get.Starter()) == 0 {
-		Log.Warning("No starter plugin available")
-		return
-	}
-
-	for _, obj := range Hooks.Get.Starter() {
-		go obj(r)
-	}
+	return
 }
 
 func initDebugRoutes(r *mux.Router) {

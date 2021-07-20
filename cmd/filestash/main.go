@@ -10,8 +10,9 @@ import (
 func main() {
 	app := common.App{}
 	config := filestash.AppConfig{
-		Port: 8334,
-		R:    mux.NewRouter(),
+		Port:            8334,
+		R:               mux.NewRouter(),
+		AutoOpenBrowser: true,
 	}
 
 	config.Init(&app)

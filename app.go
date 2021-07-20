@@ -33,7 +33,9 @@ func POST(r *mux.Router, p string, h http.HandlerFunc)   { r.HandleFunc(p, h).Me
 func DELETE(r *mux.Router, p string, h http.HandlerFunc) { r.HandleFunc(p, h).Methods("DELETE") }
 
 type AppConfig struct {
-	Port int
+	Port            int
+	R               *mux.Router
+	AutoOpenBrowser bool
 }
 
 func OpenBrowser(url string) {
@@ -56,10 +58,9 @@ func OpenBrowser(url string) {
 
 type InitResult struct {
 	Port int
-	R    *mux.Router
 }
 
-func (r InitResult) Start() bool {
+func (appConfig AppConfig) Start() bool {
 	// Routes are served via plugins to avoid getting stuck with plain HTTP. The idea is to
 	// support many more protocols in the future: HTTPS, HTTP2, TOR or whatever that sounds
 	// fancy I don't know much when this got written: IPFS, solid, ...
@@ -71,7 +72,7 @@ func (r InitResult) Start() bool {
 	}
 
 	for _, obj := range Hooks.Get.Starter() {
-		go obj(r.R)
+		go obj(appConfig.R)
 	}
 
 	return true
@@ -81,12 +82,13 @@ func (appConfig AppConfig) Init(a *App) (result InitResult) {
 	if appConfig.Port > 0 {
 		port := plg_starter_http.Register(appConfig.Port)
 		result.Port = port
-		go OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+		if appConfig.AutoOpenBrowser {
+			go OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+		}
 	}
 
 	var middlewares []Middleware
-	r := mux.NewRouter()
-	result.R = r
+	r := appConfig.R
 
 	// API for Session
 	session := r.PathPrefix("/api/session").Subrouter()

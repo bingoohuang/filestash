@@ -3,17 +3,14 @@ package plg_starter_http
 import (
 	"fmt"
 	"github.com/bingoohuang/filestash/server/common"
-	"github.com/bingoohuang/gonet/freeport"
+	"github.com/bingoohuang/gg/pkg/netx/freeport"
 	"github.com/gorilla/mux"
 	"net/http"
 	"time"
 )
 
 func Register(port int) int {
-	for !freeport.IsPortFree(port) {
-		port++
-	}
-
+	port = freeport.PortStart(port)
 	addr := fmt.Sprintf(":%d", port)
 
 	common.Hooks.Register.Starter(func(r *mux.Router) {

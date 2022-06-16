@@ -19,4 +19,5 @@ package-lock.json
 .tern-port
 .tern-project.js
 .idea
+.vscode
 /filestash_config.json
